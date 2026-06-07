@@ -26,6 +26,7 @@ from .views import (
     PendingDonorViewSet,
     StorageConfigViewSet,
     StorageRoomViewSet,
+    TestAPIView,
 )
 
 router = DefaultRouter()
@@ -49,6 +50,7 @@ router.register(r'storage-units', StorageRoomViewSet, basename='storage-unit')
 router.register(r'storage-config', StorageConfigViewSet, basename='storage-config')
 
 urlpatterns = [
+    path('test/', TestAPIView.as_view(), name='api-test'),
     path('bootstrap/', BootstrapView.as_view(), name='bootstrap'),
     path('ai-predictions/', AiPredictionsView.as_view(), name='ai-predictions'),
     path('operations/add-donation/', AddDonationView.as_view(), name='op-add-donation'),

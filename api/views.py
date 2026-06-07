@@ -449,3 +449,11 @@ class BootstrapView(SecureAPIView):
 class AiPredictionsView(SecureAPIView):
     def get(self, request):
         return Response(build_ai_predictions_payload())
+
+
+class TestAPIView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response({'message': 'Hello from Django'})

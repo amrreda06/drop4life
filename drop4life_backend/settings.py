@@ -14,6 +14,10 @@ _default_hosts = '127.0.0.1,localhost,.onrender.com'
 _allowed = os.environ.get('DJANGO_ALLOWED_HOSTS', _default_hosts)
 ALLOWED_HOSTS = [h.strip() for h in _allowed.split(',') if h.strip()] or ['127.0.0.1', 'localhost']
 
+_render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if _render_host and _render_host not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_render_host)
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -108,7 +112,14 @@ AUTHENTICATION_BACKENDS = [
     'api.auth_backend.Drop4LifeAccountBackend',
 ]
 
-CORS_ALLOW_CREDENTIALS = True
+_DEFAULT_CORS_ORIGINS = 'https://amrreda06.github.io'
+_cors_default_all = 'true' if DEBUG else 'false'
+CORS_ALLOW_ALL_ORIGINS = os.environ.get('CORS_ALLOW_ALL_ORIGINS', _cors_default_all).lower() in (
+    '1',
+    'true',
+    'yes',
+)
+CORS_ALLOW_CREDENTIALS = not CORS_ALLOW_ALL_ORIGINS
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
@@ -121,16 +132,16 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-_DEFAULT_CORS_ORIGINS = 'https://amrreda06.github.io'
-if DEBUG:
-    CORS_ALLOW_ALL_ORIGINS = True
-else:
-    CORS_ALLOW_ALL_ORIGINS = False
+if not CORS_ALLOW_ALL_ORIGINS:
     _cors = os.environ.get('CORS_ALLOWED_ORIGINS', _DEFAULT_CORS_ORIGINS)
     CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors.split(',') if o.strip()]
 
 _csrf = os.environ.get('CSRF_TRUSTED_ORIGINS', _DEFAULT_CORS_ORIGINS)
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf.split(',') if o.strip()]
+if _render_host:
+    _render_origin = f'https://{_render_host}'
+    if _render_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_render_origin)
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
