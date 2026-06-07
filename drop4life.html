@@ -1,0 +1,3661 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drop4Life — بنك الدم الذكي</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #F6F7FB;
+    --panel-dark: rgba(255, 255, 255, 0.95);
+    --panel-glass: rgba(255, 255, 255, 0.88);
+    --panel-surface: rgba(255, 255, 255, 0.78);
+    --border-glass: rgba(187, 200, 217, 0.45);
+    --text-white: #1E293B;
+    --text-gray: #64748B;
+    --panel-shadow: rgba(15, 23, 42, 0.12);
+    --bg-gradient: radial-gradient(circle at 20% 10%, rgba(255,255,255,0.8), rgba(246,247,251,0.98));
+  
+    --red: #D23B4A;
+    --red-glow: rgba(210, 59, 74, 0.25);
+    --red-dark: #B33143;
+    --gold: #C9A44F;
+    --gold-glow: rgba(201, 164, 79, 0.2);
+    --success: #18976B;
+    --info: #3E75FF;
+    
+    --font-main: 'Tajawal', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-main);
+    background: var(--bg-gradient);
+    color: var(--text-white);
+    min-height: 100vh;
+    overflow-x: hidden;
+    transition: background 0.4s ease, color 0.4s ease;
+  }
+  body.theme-dark { background: radial-gradient(circle at 30% 10%, #181B2E 0%, #0E1220 100%); color: #F8FAFC; }
+  body.theme-glass { background: radial-gradient(circle at 10% 20%, rgba(255,255,255,0.45), rgba(246,247,251,0.95)); color: #102A43; }
+  body.theme-gradient { background: linear-gradient(135deg, #F9E7EE 0%, #EEF6FF 100%); color: #102A43; }
+
+  .theme-card {
+    border-radius: 18px;
+    cursor: pointer;
+    overflow: hidden;
+    border: 1px solid rgba(15,23,42,0.08);
+    box-shadow: 0 20px 45px rgba(15,23,42,0.08);
+    transition: transform 0.25s ease, border-color 0.25s ease;
+  }
+  .theme-card:hover { transform: translateY(-4px); border-color: rgba(210,59,74,0.3); }
+  .theme-card .swatch { height: 120px; }
+  .theme-card .theme-name { padding: 14px; font-weight: 700; text-align: center; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-dark); }
+  ::-webkit-scrollbar-thumb { background: var(--red-dark); border-radius: 10px; }
+
+  /* ANIMATIONS */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes glassGlow { 0%, 100% { border-color: rgba(192, 21, 42, 0.25); } 50% { border-color: rgba(229, 26, 55, 0.5); } }
+  @keyframes criticalBlink { 0%, 100% { box-shadow: 0 0 4px var(--red), inset 0 0 8px rgba(229,26,55,0.2); border-color: var(--red); } 50% { box-shadow: 0 0 20px var(--red-glow), inset 0 0 15px rgba(229,26,55,0.5); border-color: #FF4D6A; } }
+  @keyframes warningBlink { 0%, 100% { box-shadow: 0 0 4px var(--gold); border-color: var(--gold); } 50% { box-shadow: 0 0 16px var(--gold-glow); border-color: #FFE07D; } }
+  @keyframes pulsePulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+  /* AUTH SECTION */
+  #auth-wrapper {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 20px;
+    background: url('https://images.unsplash.com/photo-1615461066841-6116ecdccd04?q=80&w=1200') no-repeat center center;
+    background-size: cover; position: relative;
+  }
+  #auth-wrapper::before {
+    content: ''; position: absolute; inset: 0; background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(8px);
+  }
+
+  .login-card {
+    position: relative; width: 100%; max-width: 450px;
+    background: var(--panel-dark); backdrop-filter: blur(20px);
+    border: 1px solid var(--border-glass); border-radius: 24px;
+    padding: 2.5rem; box-shadow: 0 20px 40px rgba(30, 41, 59, 0.12);
+    animation: fadeIn 0.6s ease-out;
+  }
+  .login-logo { text-align: center; margin-bottom: 2rem; }
+  .login-logo span { font-size: 3.5rem; display: inline-block; animation: pulsePulse 2s infinite; }
+  .login-logo h2 { font-weight: 900; letter-spacing: -0.5px; margin-top: 0.5rem; }
+  .login-logo p { color: var(--text-gray); font-size: 13px; margin-top: 0.25rem; }
+
+  /* APP LAYOUT */
+  #app-wrapper { display: flex; min-height: 100vh; flex-direction: row; width: 100%; min-width: 0; }
+  
+  /* SIDEBAR (responsive) */
+  .sidebar {
+    position: sticky; right: 0; top: 0; height: 100vh; width: min(280px, 100%); min-width: 0; flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(20px);
+    border-left: 1px solid var(--border-glass); display: flex; flex-direction: column; z-index: 100; transition: all 0.3s ease;
+  }
+  .logo-wrap { padding: 1.5rem; border-bottom: 1px solid var(--border-glass); display: flex; align-items: center; gap: 12px; }
+  .logo-icon { width: 42px; height: 42px; background: var(--red); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 0 15px var(--red-glow); }
+  .logo-text .name { font-weight: 900; font-size: 20px; color: var(--text-white); }
+  .logo-text .tag { color: var(--text-gray); font-size: 11px; }
+
+  .nav-section { padding: 1.25rem 0.75rem; flex: 1; overflow-y: auto; }
+  .nav-label { font-size: 10px; font-weight: 800; letter-spacing: 1px; color: var(--text-gray); padding: 0.75rem 0.75rem 0.35rem; text-transform: uppercase; opacity: 0.6; }
+  
+  .nav-item {
+    display: flex; align-items: center; gap: 12px; padding: 0.65rem 0.9rem; border-radius: 12px;
+    cursor: pointer; color: var(--text-gray); font-size: 14px; font-weight: 500;
+    transition: all 0.2s; margin-bottom: 6px; border: none; background: none; width: 100%; text-align: right;
+  }
+  .nav-item:hover { background: rgba(226, 232, 240, 0.85); color: var(--text-white); }
+  .nav-item.active { background: linear-gradient(90deg, var(--red-dark), var(--red)); color: #fff; box-shadow: 0 4px 15px rgba(210,59,74,0.18); }
+  .nav-badge { margin-right: auto; background: var(--red); color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 20px; font-weight: 700; }
+
+  .storage-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+  .sidebar-footer { padding: 1rem; border-top: 1px solid var(--border-glass); background: rgba(255,255,255,0.75); }
+  .user-card { display: flex; align-items: center; gap: 10px; padding: 0.5rem; border-radius: 12px; }
+  .avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--red-dark); border: 1px solid var(--red); display: flex; align-items: center; justify-content: center; font-weight: bold; }
+  .user-info .uname { font-size: 13px; font-weight: 600; }
+  .user-info .urole { color: var(--text-gray); font-size: 11px; }
+
+  /* MAIN CONTENT */
+  .main { flex: 1; min-width: 0; min-height: 100vh; display: flex; flex-direction: column; }
+  .content { min-width: 0; padding: 1.5rem; width: 100%; max-width: 1400px; margin: 0 auto; box-sizing: border-box; }
+
+  /* TOPBAR */
+  .topbar {
+    background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-glass); padding: 0.75rem 1.5rem; height: auto;
+    display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50;
+    gap: 1rem; flex-wrap: wrap; overflow: visible;
+  }
+  .topbar-left, .topbar-right { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; overflow: visible; }
+  .topbar-left { justify-content: flex-start; }
+  .topbar-center { display: flex; flex-direction: column; gap: 0.15rem; text-align: center; }
+  .topbar-pill {
+    min-width: auto;
+    height: 40px;
+    padding: 0.65rem 1rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(255, 255, 255, 0.96);
+    color: var(--text-white);
+    box-shadow: 0 12px 35px rgba(15, 23, 42, 0.08);
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+  .topbar-pill:hover {
+    background: #FFFFFF;
+    transform: translateY(-1px);
+  }
+  .topbar-pill.profile-btn:hover {
+    transform: none;
+  }
+  .topbar-pill span:first-child {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.65rem;
+    height: 1.65rem;
+    border-radius: 50%;
+    background: rgba(226, 232, 240, 1);
+    color: var(--red-dark);
+    font-size: 1rem;
+    box-shadow: inset 0 0 0 1px rgba(209, 43, 59, 0.1);
+  }
+  .pill-badge {
+    background: var(--red-dark);
+    color: #fff;
+    font-size: 11px;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    box-shadow: 0 8px 18px rgba(210, 59, 74, 0.16);
+  }
+  .topbar-icon-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.65rem;
+    height: 1.65rem;
+    border-radius: 50%;
+    background: rgba(226, 232, 240, 1);
+    color: var(--red-dark);
+    font-size: 1rem;
+    box-shadow: inset 0 0 0 1px rgba(209, 43, 59, 0.1);
+  }
+  .topbar-icon-badge {
+    position: absolute;
+    top: -5px;
+    inset-inline-end: -7px;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--red-dark);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 17px;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(210, 59, 74, 0.35);
+    pointer-events: none;
+  }
+  .topbar-icon-badge.messages-badge { background: #25d366; box-shadow: 0 4px 10px rgba(37, 211, 102, 0.35); }
+  .topbar-clock { min-width: 240px; max-width: 320px; background: rgba(255,255,255,0.82); border: 1px solid rgba(148,163,184,0.24); color: var(--text-white); padding: 0.75rem 1rem; border-radius: 999px; font-size: 13px; font-weight: 700; text-align: center; }
+  .topbar-clock small { display: block; font-size: 11px; color: var(--text-gray); }
+  .profile-menu-wrapper { position: relative; overflow: visible; z-index: 300; }
+  .profile-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    inset-inline-start: 0;
+    left: 0;
+    right: auto;
+    transform: none;
+    min-width: 220px;
+    width: max-content;
+    background: #FFFFFF;
+    border-radius: 16px;
+    border: 1px solid rgba(148,163,184,0.28);
+    box-shadow: 0 14px 36px rgba(15,23,42,0.16);
+    padding: 0.5rem 0;
+    display: none;
+    z-index: 400;
+    overflow: visible;
+  }
+  .profile-menu.open { display: block; }
+  .profile-menu button { width: 100%; background: none; border: none; padding: 1rem 1.35rem; text-align: right; font-size: 15px; font-weight: 600; color: var(--text-white); cursor: pointer; }
+  .profile-menu button:hover { background: rgba(226,232,240,0.35); }
+  .profile-menu-item-settings { display: none; }
+  .page-title { font-size: 22px; font-weight: 800; }
+  .page-subtitle { font-size: 12px; color: var(--text-gray); }
+  .topbar-actions { display: none; }
+
+  /* WHATSAPP-STYLE CHAT */
+  .wa-chat-shell {
+    display: flex;
+    flex-direction: column;
+    height: min(72vh, 640px);
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(148,163,184,0.22);
+    box-shadow: 0 12px 40px rgba(15,23,42,0.12);
+    background: #efeae2;
+  }
+  .wa-chat-header {
+    background: linear-gradient(135deg, #075e54, #128c7e);
+    color: #fff;
+    padding: 0.9rem 1.15rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-shrink: 0;
+  }
+  .wa-chat-header-title { font-weight: 800; font-size: 15px; }
+  .wa-chat-header-sub { font-size: 12px; opacity: 0.88; }
+  .wa-chat-live-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #25d366; box-shadow: 0 0 0 3px rgba(37,211,102,0.25);
+    animation: waPulse 1.8s infinite;
+  }
+  @keyframes waPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+  }
+  .wa-chat-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 1.1rem 0.5rem;
+    background-color: #e5ddd5;
+    background-image: radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px);
+    background-size: 18px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .wa-date-chip {
+    align-self: center;
+    background: rgba(255,255,255,0.92);
+    color: #54656f;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    border-radius: 8px;
+    margin: 0.5rem 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .chat-message {
+    max-width: 78%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    border-radius: 8px;
+    padding: 0.45rem 0.65rem 0.35rem;
+    position: relative;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+    margin-bottom: 0.35rem;
+  }
+  .chat-message.other {
+    align-self: flex-start;
+    background: #ffffff;
+    border-top-left-radius: 0;
+    color: #111b21;
+  }
+  .chat-message.me {
+    align-self: flex-end;
+    background: #d9fdd3;
+    border-top-right-radius: 0;
+    color: #111b21;
+  }
+  .chat-message.system {
+    align-self: center;
+    max-width: 92%;
+    background: rgba(255,243,205,0.95);
+    border: 1px dashed rgba(7,94,84,0.25);
+    text-align: center;
+    border-radius: 10px;
+  }
+  .chat-sender {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 12px;
+    margin-bottom: 0.15rem;
+  }
+  .chat-sender strong { color: #075e54; font-weight: 800; font-size: 12.5px; }
+  .chat-text {
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.55;
+    font-size: 14px;
+    padding-inline-end: 2.5rem;
+  }
+  .chat-meta {
+    font-size: 11px;
+    color: #667781;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.35rem;
+    align-items: center;
+    margin-top: -1.1rem;
+    padding-inline-end: 0.15rem;
+  }
+  .wa-ticks { color: #53bdeb; font-size: 13px; letter-spacing: -2px; }
+  .wa-ticks.sent { color: #8696a0; }
+  .chat-bubble-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .chat-bubble-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(7,94,84,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #075e54;
+    font-weight: 700;
+    font-size: 11px;
+  }
+  .wa-composer {
+    display: flex;
+    gap: 0.65rem;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: #f0f2f5;
+    border-top: 1px solid rgba(0,0,0,0.06);
+    flex-shrink: 0;
+  }
+  .wa-composer .form-control {
+    flex: 1;
+    min-width: 0;
+    border-radius: 24px;
+    border: none;
+    padding: 0.75rem 1.1rem;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  .wa-send-btn {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: none;
+    background: #075e54;
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .wa-send-btn:hover { background: #128c7e; }
+  .nav-badge.messages-badge { background: #25d366; }
+
+  /* UI COMPONENTS */
+  .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
+  .grid-8 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 0.85rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  /* Responsive media queries: tablet and mobile */
+  img, video, canvas, svg { max-width: 100%; height: auto; }
+
+  @media (max-width: 1200px) {
+    .content { padding: 1.25rem; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar { width: min(260px, 100%); min-width: 0; flex-shrink: 0; }
+    .topbar { flex-direction: column; align-items: stretch; }
+    .topbar-left, .topbar-right { justify-content: center; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+    .topbar-center { order: -1; }
+    .topbar-clock { min-width: 0; max-width: 100%; width: 100%; }
+    .page-title { font-size: 18px; }
+    .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-8 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .lab-checker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .card-header { flex-wrap: wrap; gap: 0.75rem; }
+  }
+
+  @media (max-width: 768px) {
+    #app-wrapper { flex-direction: column; }
+    .sidebar { width: 100%; min-width: 0; height: auto; position: relative; max-height: none; }
+    .logo-wrap { padding: 1rem; }
+    .nav-section { display: flex; flex-wrap: nowrap; overflow-x: auto; padding: 0.5rem; gap: 8px; -webkit-overflow-scrolling: touch; }
+    .nav-label { display: none; }
+    .nav-item { margin-bottom: 0; white-space: nowrap; width: auto; flex-shrink: 0; font-size: 13px; padding: 0.55rem 0.75rem; }
+    .sidebar-footer { display: none; }
+    .content { padding: 0.75rem !important; }
+    .topbar { padding: 0.65rem 0.75rem; gap: 0.65rem; }
+    .topbar-pill { font-size: 12px; padding: 0.5rem 0.85rem; height: auto; }
+    .stat-value { font-size: 24px; }
+    .stat-icon { font-size: 28px; }
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    .grid-8 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .card { padding: 1rem; border-radius: 14px; }
+    .card-title { font-size: 14px; }
+    .compat-grid { flex-direction: column; }
+    .lab-checker { grid-template-columns: 1fr; }
+    .chat-message { max-width: 92%; }
+    .chat-input-row .form-control { min-width: 0; }
+    .modal { width: min(96vw, 550px); padding: 1.25rem; border-radius: 18px; }
+    #toast-box { left: 1rem; right: 1rem; bottom: 1rem; }
+    .table-responsive table { min-width: 560px; }
+    .login-card { padding: 1.75rem; border-radius: 18px; }
+    .login-logo span { font-size: 2.75rem; }
+  }
+
+  @media (max-width: 480px) {
+    .topbar-pill span:first-child { width: 1.35rem; height: 1.35rem; font-size: 0.9rem; }
+    .grid-8 { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    .blood-card .b-type { font-size: 20px; }
+    .btn { padding: 0.55rem 1rem; font-size: 12px; }
+    .profile-menu { min-width: 180px; inset-inline-start: auto; inset-inline-end: 0; left: auto; right: 0; }
+    .form-control { font-size: 16px; }
+  }
+
+  .card {
+    background: var(--panel-glass); border: 1px solid var(--border-glass);
+    border-radius: 18px; padding: 1.5rem; box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    position: relative; overflow: hidden; transition: all 0.3s;
+  }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; border-bottom: 1px solid rgba(148,163,184,0.18); padding-bottom: 0.75rem; }
+  .card-title { font-size: 15px; font-weight: 700; color: var(--text-white); display: flex; align-items: center; gap: 8px; }
+
+  /* STAT CARD */
+  .stat-card { position: relative; }
+  .stat-label { font-size: 12px; color: var(--text-gray); margin-bottom: 4px; }
+  .stat-value { font-size: 32px; font-weight: 900; line-height: 1.2; }
+  .stat-icon {
+    position: absolute; left: 1.25rem; top: 1.25rem;
+    font-size: 36px; opacity: 0.45;
+    color: rgba(30, 41, 59, 0.7);
+    text-shadow: 0 0 0.5px rgba(255,255,255,0.35);
+  }
+
+  /* CRITICAL GLOWING CARDS */
+  .blood-card { text-align: center; padding: 1.25rem 0.5rem; cursor: pointer; background: rgba(226, 239, 255, 0.75); }
+  .blood-card .b-type { font-size: 24px; font-weight: 900; color: var(--text-white); margin-bottom: 4px; }
+  .blood-card .b-volume { font-size: 12px; color: var(--text-gray); }
+  .blood-card .b-progress { background: rgba(62, 117, 255, 0.12); border-radius: 10px; height: 6px; margin-top: 10px; overflow: hidden; }
+  .blood-card .b-bar { height: 100%; border-radius: 10px; }
+  
+  .blood-card.glow-critical { animation: criticalBlink 2s infinite; }
+  .blood-card.glow-low { animation: warningBlink 2.5s infinite; }
+
+  /* CONTROLS & FORMS */
+  .form-group { margin-bottom: 1.25rem; }
+  .form-label { display: block; font-size: 12px; font-weight: 700; color: var(--text-gray); margin-bottom: 6px; }
+  .form-control {
+    width: 100%; padding: 0.75rem 1rem; background: rgba(15, 23, 42, 0.05);
+    border: 1px solid var(--border-glass); border-radius: 12px; color: var(--text-white);
+    font-family: var(--font-main); font-size: 13.5px; outline: none; transition: all 0.2s;
+  }
+  .form-control:focus { border-color: var(--red); box-shadow: 0 0 10px rgba(229,26,55,0.2); }
+  .autocomplete-suggestions {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+    z-index: 450; max-height: 220px; overflow-y: auto; background: #FFFFFF;
+    border: 1px solid rgba(148,163,184,0.25); border-radius: 14px;
+    box-shadow: 0 16px 40px rgba(15,23,42,0.14); display: none;
+  }
+  .autocomplete-suggestions.open { display: block; }
+  .autocomplete-suggestion {
+    padding: 0.85rem 1rem; cursor: pointer; color: #102A43; font-size: 13px;
+  }
+  .autocomplete-suggestion:hover { background: rgba(226,232,240,0.90); }
+  .autocomplete-suggestion strong { color: var(--red-dark); }
+  
+  .btn {
+    padding: 0.65rem 1.5rem; border-radius: 12px; font-family: var(--font-main);
+    font-size: 13px; font-weight: 600; cursor: pointer; border: none;
+    display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;
+  }
+  .btn-primary { background: linear-gradient(135deg, var(--red), var(--red-dark)); color: #fff; box-shadow: 0 4px 15px rgba(210,59,74,0.25); }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(229,26,55,0.5); }
+  .btn-secondary { background: rgba(17, 25, 39, 0.08); color: var(--text-white); }
+  .btn-secondary:hover { background: rgba(17, 25, 39, 0.14); }
+  .btn-danger { background: #DC3545; color: #fff; }
+  .btn-sm { padding: 0.4rem 1rem; font-size: 11.5px; border-radius: 8px; }
+
+  /* TABLES */
+  .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; border: 1px solid var(--border-glass); }
+  .table-responsive table { min-width: 700px; }
+  .table-responsive td, .table-responsive th { white-space: normal; word-break: break-word; }
+  table { width: 100%; border-collapse: collapse; text-align: right; }
+  th { padding: 1rem; font-size: 11px; text-transform: uppercase; color: var(--text-gray); background: rgba(226, 232, 240, 0.95); border-bottom: 1px solid var(--border-glass); }
+  td { padding: 1rem; font-size: 13px; border-bottom: 1px solid rgba(148,163,184,0.15); color: var(--text-white); }
+  tr:hover td { background: rgba(226, 239, 255, 0.7); }
+
+  .badge { display: inline-flex; padding: 4px 10px; border-radius: 30px; font-size: 11px; font-weight: 700; }
+  .badge-danger { background: rgba(220,53,69,0.15); color: #FF4D6A; border: 1px solid rgba(220,53,69,0.3); }
+  .badge-warning { background: rgba(212,175,55,0.15); color: #FFE07D; border: 1px solid rgba(212,175,55,0.3); }
+  .badge-success { background: rgba(30,175,97,0.15); color: #42FF99; border: 1px solid rgba(30,175,97,0.3); }
+  .badge-info { background: rgba(37,117,252,0.15); color: #7CACFF; border: 1px solid rgba(37,117,252,0.3); }
+
+  .blood-tag { width: 34px; height: 34px; border-radius: 8px; background: var(--red-dark); border: 1px solid var(--red); display: inline-flex; align-items: center; justify-content: center; font-weight: 900; color: #fff; }
+
+  /* PAGES & MODULES */
+  .page { display: none; animation: fadeIn 0.4s ease-out; }
+  .page.active { display: block; }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(15, 23, 42, 0.18); backdrop-filter: blur(5px);
+    display: flex; align-items: center; justify-content: center; z-index: 1000;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: #FFFFFF; border: 1px solid var(--border-glass); width: min(90vw, 550px); max-width: 95vw;
+    border-radius: 24px; padding: 2rem; box-shadow: 0 25px 50px rgba(0,0,0,0.12);
+    max-height: 90vh; overflow-y: auto;
+    transform: scale(0.9); transition: transform 0.3s ease;
+  }
+  .modal-overlay.open .modal { transform: scale(1); }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 1.5rem; }
+
+  /* TOAST */
+  #toast-box { position: fixed; bottom: 2rem; left: 2rem; z-index: 10000; display: flex; flex-direction: column; gap: 10px; }
+  .toast { background: rgba(255, 255, 255, 0.95); border: 1px solid var(--border-glass); padding: 1rem 1.5rem; border-radius: 14px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); display: flex; align-items: center; gap: 12px; font-size: 13.5px; color: var(--text-white); animation: fadeIn 0.3s forwards; }
+
+  /* COMPATIBILITY APP */
+  .compat-grid { display: flex; gap: 15px; background: rgba(241, 245, 255, 0.9); padding: 1rem; border-radius: 12px; margin-bottom: 1rem; }
+  .compat-box { flex: 1; text-align: center; padding: 10px; border-radius: 8px; border: 1px dashed var(--border-glass); }
+
+  /* LAB RESULTS SECTION */
+  .lab-checker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; background: rgba(241, 245, 255, 0.9); padding: 1rem; border-radius: 12px; }
+
+  
+
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'js/api-client.js' %}"></script>
+</head>
+<body>
+
+<div id="auth-wrapper">
+  <div class="login-card">
+    <div class="login-logo">
+      <span>🩸</span>
+      <h2>Drop4Life</h2>
+      <p>نظام إدارة وبنك الدم الذكي الإقليمي</p>
+    </div>
+    
+    <div id="login-error" style="display:none; background:rgba(220,53,69,0.15); border:1px solid #dc3545; color:#ff4d6a; padding:10px; border-radius:10px; font-size:12.5px; margin-bottom:1rem; text-align:center;"></div>
+
+    <form id="login-form" autocomplete="on" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label class="form-label">اسم المستخدم</label>
+        <input type="text" id="login-username" name="username" class="form-control" placeholder="أدخل اسم الحساب..." autocomplete="username" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">كلمة المرور</label>
+        <div style="position:relative;">
+          <input type="password" id="login-password" name="password" class="form-control" placeholder="••••••••" autocomplete="current-password" required>
+          <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:12px; color:var(--text-gray)" onclick="togglePasswordVisibility()">👁️</span>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:between; align-items:center; margin-bottom:1.5rem; font-size:12.5px;">
+        <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+          <input type="checkbox" id="login-remember"> تذكرني دائماً
+        </label>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:0.85rem;" id="login-submit-btn">
+        <span>تسجيل الدخول المأمن</span>
+      </button>
+    </form>
+    
+    <div style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid rgba(255,255,255,0.05); font-size:11px; color:var(--text-gray); text-align:center;">
+      <p>نظام Drop4Life متصل بقاعدة البيانات. أول تشغيل: نفّذ <strong>python manage.py setup_system</strong></p>
+    </div>
+  </div>
+</div>
+
+<div id="app-wrapper" style="display:none;">
+  
+  <aside class="sidebar">
+    <div class="logo-wrap">
+      <div class="logo-icon">🩸</div>
+      <div class="logo-text">
+        <div class="name">Drop4Life</div>
+        <div class="tag">إدارة الصلاحيات الذكية</div>
+      </div>
+    </div>
+
+    <nav class="nav-section">
+      <div class="nav-label">العامة</div>
+      <button class="nav-item active rbac-view" data-pages="dashboard" onclick="switchPage('dashboard', this)"><span>📊</span> لوحة الرقابة</button>
+      <button class="nav-item rbac-view" data-pages="statistics" onclick="switchPage('statistics', this)"><span>📈</span> إحصائيات النظام</button>
+      
+      <div class="nav-label">مخازن الدم والأكياس</div>
+      <button class="nav-item rbac-view" data-pages="inventory" onclick="switchPage('inventory', this)"><span>🧪</span> جرد المخزون العام <span class="nav-badge" id="badge-low-count">0</span></button>
+      <button class="nav-item rbac-view" data-pages="donations" onclick="switchPage('donations', this)"><span>💉</span> السجل الطبي للتبرعات</button>
+      <button class="nav-item rbac-view" data-pages="lab" onclick="switchPage('lab', this)"><span>🔬</span> وحدة الفحص المعملي <span class="nav-badge" style="background:var(--info)" id="badge-lab-pending">0</span></button>
+      
+      <div class="nav-label">اللوجستيات</div>
+      <button class="nav-item rbac-view" data-pages="storage" onclick="switchPage('storage', this)"><span>🗄️</span> نظام التخزين</button>
+      <button class="nav-item rbac-view" data-pages="requests" onclick="switchPage('requests', this)"><span>🏥</span> طلبيات المستشفيات <span class="nav-badge" id="badge-requests-count" style="display:none">0</span></button>
+      <button class="nav-item rbac-view" data-pages="hospitals" onclick="switchPage('hospitals', this)"><span>🏨</span> المنشآت الطبية المرتبطة</button>
+      <button class="nav-item rbac-view" data-pages="donors" onclick="switchPage('donors', this)"><span>👥</span> قاعدة المتبرعين</button>
+      
+      <div class="nav-label">الرسائل</div>
+      <button class="nav-item rbac-view" data-pages="messages" onclick="switchPage('messages', this)"><span>💬</span> المحادثات الداخلية <span class="nav-badge messages-badge" id="badge-messages-count" style="display:none">0</span></button>
+
+      <div class="nav-label">الإشعارات</div>
+      <button class="nav-item rbac-view" data-pages="notifications" onclick="switchPage('notifications', this)"><span>🔔</span> التنبيهات والإشعارات <span class="nav-badge" id="badge-notifications-count" style="display:none">0</span></button>
+
+      <div class="nav-label">النظام والرقابة</div>
+      <button class="nav-item rbac-view" data-pages="audit" onclick="switchPage('audit', this)"><span>📜</span> سجلات التدقيق والرقابة Audit</button>
+      <button class="nav-item rbac-view" data-pages="disposal" onclick="switchPage('disposal', this)"><span>🗑️</span> الإتلاف والتخلص الطبي</button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="avatar" id="user-avatar">SA</div>
+        <div class="user-info">
+          <div class="uname" id="user-display-name">جاري التحميل...</div>
+          <div class="urole" id="user-display-role">مسؤول النظام</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="topbar-pill" type="button" onclick="switchPage('notifications')"><span class="topbar-icon-wrap">🔔<span class="topbar-icon-badge" id="topbar-notifications-badge" style="display:none">0</span></span> الإشعارات</button>
+        <button class="topbar-pill" type="button" onclick="switchPage('messages')"><span class="topbar-icon-wrap">💬<span class="topbar-icon-badge messages-badge" id="topbar-messages-badge" style="display:none">0</span></span> الرسائل</button>
+      </div>
+      <div class="topbar-center">
+        <div class="page-title" id="main-title">لوحة الرقابة الموحدة</div>
+        <div class="page-subtitle" id="main-subtitle">مؤشرات حيوية وتدفقات الدم اللحظية</div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-clock" id="live-clock">جاري التحميل...</div>
+        <div class="profile-menu-wrapper">
+          <button class="topbar-pill profile-btn" type="button" onclick="toggleProfileMenu()"><span>👤</span> الملف</button>
+          <div class="profile-menu" id="profile-menu">
+            <button type="button" onclick="switchPage('profile', document.querySelector('.nav-item[data-pages=profile]')); toggleProfileMenu();">الملف الشخصي</button>
+            <button type="button" class="profile-menu-item-settings" onclick="switchPage('admin-settings', document.querySelector('.nav-item[data-pages=admin-settings]')); toggleProfileMenu();">الإعدادات</button>
+            <button type="button" onclick="handleLogout();">تسجيل الخروج</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <div class="page active" id="page-dashboard">
+        
+        <div id="critical-alert-banner" style="display:none; background: linear-gradient(90deg, rgba(255, 230, 233, 0.95), rgba(253, 211, 216, 0.95)); padding:1rem; border-radius:14px; margin-bottom:1.5rem; align-items:center; gap:12px; box-shadow:0 0 20px rgba(210,59,74,0.18); border:1px solid rgba(209, 43, 59, 0.2); color: #1E293B;">
+          <span style="font-size:24px; animation: pulsePulse 1s infinite">⚠️</span>
+          <div style="flex:1; color: #1E293B;"><strong style="color:#922028;">إشعار عاجل للعمليات:</strong> توجد فصائل دموية حرجة انخفضت دون حد الأمان الطبي الأدنى. يرجى مراجعة حملات التبرع فوراً.</div>
+        </div>
+
+        <div class="grid-4">
+          <div class="card stat-card">
+            <div class="stat-icon">🩸</div>
+            <div class="stat-label">المخزون الإجمالي المتاح</div>
+            <div class="stat-value" id="stat-total-units">0</div>
+          </div>
+          <div class="card stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-label">إجمالي المتبرعين المسجلين</div>
+            <div class="stat-value" id="stat-total-donors">0</div>
+          </div>
+          <div class="card stat-card" style="border-color:var(--gold)">
+            <div class="stat-icon">⏳</div>
+            <div class="stat-label">أكياس في الفحص المعملي</div>
+            <div class="stat-value" id="stat-pending-lab">0</div>
+          </div>
+          <div class="card stat-card">
+            <div class="stat-icon">🏥</div>
+            <div class="stat-label">طلبات مستشفيات معلقة</div>
+            <div class="stat-value" id="stat-pending-requests">0</div>
+          </div>
+        </div>
+
+        <h3 style="margin-bottom:1rem; font-size:16px; font-weight:700;">🚨 مراقبة توهج المخزون الحي (تنبيه مرئي ذكي عند الخطر)</h3>
+        <div class="grid-8" id="dashboard-blood-matrix">
+          </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><div class="card-title">🤖 تحليلات التنبؤ والتوقع بالذكاء الاصطناعي (AI Module)</div></div>
+            <div id="ai-predictions-panel" style="background:rgba(255,255,255,0.02); padding:1rem; border-radius:12px; font-size:13px; line-height:1.6">
+              <p id="ai-model-status" style="margin-bottom:0.75rem"><strong>جاري تحميل نموذج الاستهلاك الذكي...</strong></p>
+              <div id="ai-insights-list" style="margin-bottom:0.75rem"></div>
+              <div id="ai-recommendations-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-statistics">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📈 إحصائيات الرؤية الطبية الذكية</div>
+          </div>
+          <div class="grid-3" style="margin-top:1rem; gap:1rem;">
+            <div class="card" style="min-height:360px;">
+              <div class="card-header" style="padding-bottom:0.75rem;"><div class="card-title">جرد الأكياس حسب الفصائل</div></div>
+              <div style="height:300px;"><canvas id="chart-blood-group-donut"></canvas></div>
+            </div>
+            <div class="card" style="min-height:360px;">
+              <div class="card-header" style="padding-bottom:0.75rem;"><div class="card-title">طلبات المستشفيات حسب النوع</div></div>
+              <div style="height:300px;"><canvas id="chart-request-types"></canvas></div>
+            </div>
+            <div class="card" style="min-height:360px;">
+              <div class="card-header" style="padding-bottom:0.75rem;"><div class="card-title">نتائج الفحص المعملي</div></div>
+              <div style="height:300px;"><canvas id="chart-lab-outcomes"></canvas></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-inventory">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🧪 نظام إدارة الأكياس الذكي مع تتبع الصلاحية</div>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; margin-top:1rem;">
+            <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; width:100%;">
+              <input id="inventory-search" type="text" class="form-control" placeholder="البحث الذكي برقم الكيس، الفصيلة، أو اسم المتبرع..." style="flex:1; min-width:220px;" />
+              <select id="inventory-filter-blood" class="form-control" style="width:160px;" onchange="renderInventoryBagsTable()">
+                <option value="">كل الفصائل</option>
+                <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+                <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+              </select>
+              <select id="inventory-filter-status" class="form-control" style="width:160px;" onchange="renderInventoryBagsTable()">
+                <option value="">كل الحالات</option>
+                <option value="Approved">معتمد ✅</option>
+                <option value="Pending">قيد الفحص ⏳</option>
+                <option value="Rejected">مرفوض ❌</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr><th>رقم الكيس (Bag ID)</th><th>الفصيلة</th><th>المتبرع</th><th>تاريخ الإضافة</th><th>تاريخ الصلاحية</th><th>الأيام المتبقية</th><th>الحالة</th><th>الموقع</th><th>الإجراء</th></tr>
+              </thead>
+              <tbody id="table-inventory-bags-full">
+                </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <div class="card" style="margin-top:1.5rem;">
+          <div class="card-header">
+            <div class="card-title">📊 ملخص المخزون حسب الفصيلة</div>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr><th>الفصيلة</th><th>المتاح (Available)</th><th>المحجوز (Reserved)</th><th>المصروف (Issued)</th><th>المنتهي (Expired)</th><th>الحالة الطبية</th></tr>
+              </thead>
+              <tbody id="table-inventory-summary">
+                </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-donations">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">💉 السجل الطبي العام لحركات التبرع والأكياس</div>
+            <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-donation')">+ تسجيل تبرع جديد</button>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; margin-top:1rem;">
+            <input id="donations-search" type="text" class="form-control" placeholder="البحث الذكي في سجل التبرعات (الكود، المتبرع، الفصيلة، الموقع)" style="flex:1; min-width:220px;" />
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr><th>كود الكيس</th><th>المتبرع</th><th>الفصيلة</th><th>الكمية</th><th>التاريخ</th><th>حالة الكيس</th><th>موقع التخزين الثلاجي</th></tr>
+              </thead>
+              <tbody id="table-donations-full">
+                </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-lab">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🔬 وحدة الفحوصات المعملية — تحديد فئات الدم والسلامة الفيروسية</div>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+              <input id="lab-search" type="text" class="form-control" placeholder="ابحث بـ ID أو المتبرع..." style="min-width:280px;" />
+              <select id="lab-filter-status" class="form-control" style="min-width:160px;" onchange="renderLabModuleTable()">
+                <option value="">كل الحالات</option>
+                <option value="Pending">قيد الفحص ⏳</option>
+                <option value="Approved">معتمد ✅</option>
+                <option value="Rejected">مرفوض ❌</option>
+              </select>
+            </div>
+          </div>
+          <div style="background:rgba(62,117,255,0.08); padding:1rem; border-radius:12px; margin-bottom:1rem; border:1px solid rgba(62,117,255,0.2); font-size:13px;">
+            <strong style="color:var(--info);">📋 ملخص الفحوصات:</strong> عدد الأكياس المعلقة <span id="lab-pending-count" style="color:var(--gold);">0</span> | المعتمدة <span id="lab-approved-count" style="color:var(--success);">0</span> | المرفوضة <span id="lab-rejected-count" style="color:var(--red);">0</span>
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr><th>رقم الكيس</th><th>المتبرع</th><th>الفصيلة المبدئية</th><th>حالة الفحص</th><th>التاريخ</th><th>الإجراء والاختبارات</th></tr>
+              </thead>
+              <tbody id="table-lab-full">
+                </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-requests">
+        <div class="card">
+          <div class="card-header" style="flex-direction:column; align-items:flex-start; gap:0.75rem;">
+            <div style="display:flex; align-items:center; justify-content:space-between; width:100%; gap:1rem; flex-wrap:wrap;">
+              <div class="card-title">🏥 طلبات صرف الدم للمستشفيات الخارجية والمحلي</div>
+              <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-request')">+ إنشاء طلب صرف جديد</button>
+            </div>
+            <input id="request-search" type="text" class="form-control" placeholder="ابحث في طلبات الصرف بالاسم أو الفصيلة أو الحالة..." style="max-width:420px;" />
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr><th>كود الطلب</th><th>المستشفى الوجهة</th><th>الفصيلة</th><th>الكمية</th><th>الأولوية</th><th>الحالة</th><th>إجراءات التنفيذ المأمنة</th></tr>
+              </thead>
+              <tbody id="table-requests-full">
+                </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-hospitals">
+        <div class="card">
+          <div class="card-header" style="flex-direction:column; align-items:flex-start; gap:0.75rem;">
+            <div style="display:flex; align-items:center; justify-content:space-between; width:100%; gap:1rem; flex-wrap:wrap;">
+              <div>
+                <div class="card-title">� قواعد المستشفيات المرتبطة</div>
+                <div style="font-size:13px; color:var(--text-gray); margin-top:4px;">أضف مستشفى جديد مع الاسم، العنوان، ورقم الهاتف، وراجع المكتبة الحالية.</div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-hospital')">+ إضافة مستشفى جديد</button>
+            </div>
+            <input id="hospital-search" type="text" class="form-control" placeholder="ابحث باسم المستشفى أو العنوان أو الهاتف..." style="max-width:420px;" />
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr><th>اسم المستشفى</th><th>العنوان</th><th>الهاتف</th><th>اسم المدير</th></tr>
+              </thead>
+              <tbody id="table-hospitals-full"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:1.5rem;">
+          <div class="card-header" style="flex-direction:column; align-items:flex-start; gap:0.75rem;">
+            <div style="display:flex; align-items:center; justify-content:space-between; width:100%; gap:1rem; flex-wrap:wrap;">
+              <div>
+                <div class="card-title">📦 سجل تسليم طلبات المستشفيات</div>
+                <div style="font-size:13px; color:var(--text-gray); margin-top:4px;">سجل تسليم الطلبات مع بيانات المستلم وتاريخ التسليم.</div>
+              </div>
+            </div>
+            <input id="hospital-delivery-search" type="text" class="form-control" placeholder="ابحث في سجلات التسليم بالمستشفى أو اسم المستلم..." style="max-width:420px;" />
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr><th>رقم الطلب</th><th>المستشفى</th><th>الفصيلة</th><th>الكمية</th><th>المستلم</th><th>هاتف المستلم</th><th>التاريخ</th></tr>
+              </thead>
+              <tbody id="table-hospital-deliveries-full">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-donors">
+        <div class="card">
+          <div class="card-header" style="flex-direction:column; align-items:flex-start; gap:0.75rem;">
+            <div style="display:flex; align-items:center; justify-content:space-between; width:100%; gap:1rem; flex-wrap:wrap;">
+              <div class="card-title">👥 السجل الموحد للمتبرعين</div>
+            </div>
+            <input id="donor-search" type="text" class="form-control" placeholder="ابحث في قاعدة المتبرعين بالاسم أو الفصيلة أو الهاتف..." style="max-width:420px;" />
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr><th>رقم الملف</th><th>الاسم الكامل</th><th>الفصيلة</th><th>الهاتف</th><th>العمر</th><th>العنوان</th><th>آخر تبرع</th><th>عدد التبرعات</th><th>الإجراءات</th></tr>
+              </thead>
+              <tbody id="table-donors-full">
+                </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="page" id="page-audit">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📜 سجل الأمان والتدقيق الشامل (System Audit Logs)</div>
+            <span class="badge badge-danger">عرض للمسؤولين فقط</span>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
+            <div style="font-size:14px; color:var(--text-gray);">يمكنك البحث عن عمليات محددة حسب الموظف أو نوع الحركة أو تفاصيل الحدث.</div>
+            <input id="audit-search" type="text" class="form-control" placeholder="ابحث في السجل..." style="max-width:320px;" />
+          </div>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr><th>الطابع الزمني</th><th>الموظف</th><th>الصلاحية</th><th>نوع الحركة الإجرائية</th><th>بيانات الحركة التفصيلية</th></tr>
+              </thead>
+              <tbody id="table-audit-full">
+                </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-disposal">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🗑️ سجل الإتلاف والتخلص البيولوجي الآمن للمخلفات</div>
+          </div>
+          <div class="card-body" style="display:grid; gap:1.2rem;">
+            <div style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center; justify-content:space-between;">
+              <div style="color:var(--text-gray); font-size:14px;">لأي كيس يُرسل للتخلص، يجب إدخال سبب طبي واضح قبل الحفظ.</div>
+              <button class="btn btn-primary" onclick="document.getElementById('dispose-form').scrollIntoView({behavior:'smooth'})">سجل سبب التخلص</button>
+            </div>
+            <input id="disposal-search" type="text" class="form-control" placeholder="ابحث في سجل الاتلاف بالرقم أو الفصيلة أو السبب..." style="max-width:420px;" />
+            <div id="dispose-form" style="padding:1.2rem; background:rgba(255,255,255,0.88); border-radius:18px; border:1px solid rgba(148,163,184,0.18);">
+              <div style="display:grid; gap:0.85rem; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
+                <div class="form-group"><label class="form-label">كود الكيس</label><input id="dispose-bag" class="form-control" placeholder="مثال: BAG-003" /></div>
+                <div class="form-group"><label class="form-label">نوع الكيس</label><select id="dispose-type" class="form-control"><option>O+</option><option>A+</option><option>B+</option><option>AB+</option><option>O-</option><option>A-</option><option>B-</option><option>AB-</option></select></div>
+                <div class="form-group" style="grid-column:1 / -1;"><label class="form-label">السبب الطبي للتخلص</label><input id="dispose-reason" class="form-control" placeholder="أسباب مثل تلوث أو فحص غير مقبول" /></div>
+              </div>
+              <div style="display:flex; justify-content:flex-end; margin-top:1rem;"><button class="btn btn-primary" onclick="executeDispose()">حفظ السجل</button></div>
+            </div>
+          </div>
+          <div class="table-responsive" style="margin-top:1.4rem;">
+            <table>
+              <thead>
+                <tr><th>كود الكيس التالف</th><th>نوع الكيس</th><th>الفصيلة</th><th>تاريخ الإتلاف</th><th>سبب الاستبعاد الطبي</th><th>الموظف المسؤول</th></tr>
+              </thead>
+              <tbody id="table-disposal-full">
+                </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-storage">
+        <div class="card">
+          <div class="card-header"><div class="card-title">🗄️ نظرة عامة على نظام التخزين (Rooms / Fridges / Shelves)</div></div>
+          <div style="display:grid; gap:1rem;">
+            <div class="storage-grid" id="storage-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-notifications">
+        <div class="card">
+          <div class="card-header"><div class="card-title">🔔 لوحة الإشعارات المركزية</div></div>
+          <div id="notifications-list"></div>
+        </div>
+      </div>
+
+      <div class="page" id="page-messages">
+        <div class="card" style="padding:0; overflow:hidden;">
+          <div id="messages-area"></div>
+        </div>
+      </div>
+
+      <div class="page" id="page-profile">
+        <div class="card">
+          <div class="card-header"><div class="card-title">👤 الملف الشخصي الخاص بك</div></div>
+          <div style="display:grid; gap:1rem;">
+            <div style="display:grid; gap:0.9rem; max-width:640px;">
+              <div class="form-group"><label class="form-label">الاسم الكامل</label><input id="profile-name" class="form-control" /></div>
+              <div class="form-group"><label class="form-label">البريد الإلكتروني</label><input id="profile-email" class="form-control" disabled /></div>
+              <div class="form-group"><label class="form-label">الصلاحية الحالية</label><input id="profile-role" class="form-control" disabled /></div>
+              <div class="form-group"><label class="form-label">تحديث كلمة المرور</label><input id="profile-password" type="password" class="form-control" placeholder="اسم مرور جديد" autocomplete="new-password" /></div>
+              <div style="display:flex; justify-content:flex-end;"><button class="btn btn-primary" onclick="saveProfile()">حفظ التغييرات</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-admin-settings">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">⚙️ إعدادات المسؤول العام (Super Admin)</div>
+            <span class="badge badge-danger">سوبر أدمن فقط</span>
+          </div>
+          <div style="display:grid; gap:2rem;">
+            
+            <!-- ACCOUNTS MANAGEMENT SECTION -->
+            <div id="admin-accounts-section" style="border:1px solid rgba(148,163,184,0.18); border-radius:14px; padding:1.5rem; background:rgba(255,255,255,0.5);">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; gap:0.75rem; flex-wrap:wrap;">
+                <h3 style="font-weight:700; font-size:15px;">👥 إدارة الحسابات والمستخدمين</h3>
+                <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-account')">+ إضافة حساب جديد</button>
+              </div>
+              <div style="display:flex; align-items:center; justify-content:flex-end; margin-bottom:1rem; gap:0.75rem; flex-wrap:wrap;">
+                <input id="accounts-search" type="text" class="form-control" placeholder="ابحث في الحسابات والموظفين..." style="max-width:360px; flex:1; min-width:220px;" />
+              </div>
+              <div class="table-responsive">
+                <table>
+                  <thead>
+                    <tr><th>اسم المستخدم</th><th>الاسم الكامل</th><th>الصلاحية</th><th>البريد الإلكتروني</th><th>حالة الحساب</th><th>الإجراءات</th></tr>
+                  </thead>
+                  <tbody id="table-accounts-full"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- STORAGE CONFIGURATION SECTION -->
+            <div style="border:1px solid rgba(148,163,184,0.18); border-radius:14px; padding:1.5rem; background:rgba(255,255,255,0.5);">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem;">
+                <h3 style="font-weight:700; font-size:15px;">🗄️ تخصيص نظام التخزين</h3>
+                <button class="btn btn-primary btn-sm" onclick="openModal('modal-edit-storage')">⚙️ تحديث الإعدادات</button>
+              </div>
+              <div id="storage-config-display" style="display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));"></div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<div id="toast-box"></div>
+
+<div class="modal-overlay" id="modal-add-account">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 style="font-weight:900;">➕ إضافة حساب مستخدم جديد</h3>
+      <button onclick="closeModal('modal-add-account')" style="background:none; border:none; color:var(--text-white); cursor:pointer; font-size:18px;">✕</button>
+    </div>
+    <div class="form-group"><label class="form-label">اسم المستخدم (Username)</label><input type="text" id="new-account-username" class="form-control" placeholder="مثال: doctor_ali" /></div>
+    <div class="form-group"><label class="form-label">الاسم الكامل</label><input type="text" id="new-account-name" class="form-control" placeholder="الاسم الرباعي..." /></div>
+    <div class="grid-2">
+      <div class="form-group"><label class="form-label">كلمة المرور</label><input type="password" id="new-account-password" class="form-control" placeholder="كلمة مرور قوية" autocomplete="new-password" /></div>
+      <div class="form-group"><label class="form-label">البريد الإلكتروني</label><input type="email" id="new-account-email" class="form-control" placeholder="example@drop4life.org" /></div>
+    </div>
+    <div class="form-group"><label class="form-label">الصلاحية (Role)</label><select id="new-account-role" class="form-control">
+      <option value="superadmin">🔐 Super Admin - السوبر أدمن (كامل الصلاحيات)</option>
+      <option value="admin">👨‍💼 Admin - إدارة (إدارة المستخدمين والطلبات)</option>
+      <option value="deputy">👨‍⚕️ Deputy - نائب مدير (نائب إداري)</option>
+      <option value="lab">🔬 Lab - معمل (فحوصات وتحليل فقط)</option>
+    </select></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-add-account')">إلغاء</button>
+      <button class="btn btn-primary" onclick="executeAddAccount()">💾 حفظ الحساب الجديد</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-edit-storage">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 style="font-weight:900;">⚙️ تخصيص نظام التخزين</h3>
+      <button onclick="closeModal('modal-edit-storage')" style="background:none; border:none; color:var(--text-white); cursor:pointer; font-size:18px;">✕</button>
+    </div>
+    <div style="max-height:400px; overflow-y:auto;">
+      <div id="storage-config-form"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-edit-storage')">إلغاء</button>
+      <button class="btn btn-primary" onclick="executeSaveStorageConfig()">💾 حفظ تكوين التخزين</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-edit-account">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 style="font-weight:900;" id="edit-account-title">تحرير بيانات الحساب</h3>
+      <button onclick="closeModal('modal-edit-account')" style="background:none; border:none; color:var(--text-white); cursor:pointer; font-size:18px;">✕</button>
+    </div>
+    <input type="hidden" id="edit-account-username" />
+    <div class="form-group"><label class="form-label">الاسم الكامل</label><input type="text" id="edit-account-name" class="form-control" /></div>
+    <div class="form-group"><label class="form-label">البريد الإلكتروني</label><input type="email" id="edit-account-email" class="form-control" /></div>
+    <div class="form-group"><label class="form-label">الصلاحية (Role)</label><select id="edit-account-role" class="form-control">
+      <option value="superadmin">🔐 Super Admin</option>
+      <option value="admin">👨‍💼 Admin</option>
+      <option value="deputy">👨‍⚕️ Deputy</option>
+      <option value="lab">🔬 Lab</option>
+    </select></div>
+    <div class="form-group"><label class="form-label">حالة الحساب</label><select id="edit-account-status" class="form-control">
+      <option value="active">✅ نشط</option>
+      <option value="inactive">❌ معطل</option>
+    </select></div>
+    <div class="form-group"><label class="form-label">تعيين كلمة مرور جديدة (اتركها فارغة للاحتفاظ بالحالية)</label><input type="password" id="edit-account-password" class="form-control" placeholder="كلمة مرور جديدة" autocomplete="new-password" /></div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="executeDeleteAccount()">🗑️ حذف الحساب</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-edit-account')">إلغاء</button>
+      <button class="btn btn-primary" onclick="executeSaveAccount()">💾 حفظ التعديلات</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-donor-profile">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 style="font-weight:900" id="dp-title">تاريخ بروفايل المتبرع</h3>
+      <button onclick="closeModal('modal-donor-profile')" style="background:none; border:none; color:var(--text-white); cursor:pointer; font-size:18px;">✕</button>
+    </div>
+    <div style="background:rgba(241,245,255,0.9); padding:1.25rem; border-radius:14px; margin-bottom:1rem;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:0.75rem;">
+        <span style="color:var(--text-gray)">إجمالي مرات التبرع بالمنظومة:</span>
+        <strong id="dp-count" style="color:var(--success); font-size:16px;">0 مرات</strong>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:0.75rem;">
+        <span style="color:var(--text-gray)">الرقم القومي:</span>
+        <strong id="dp-national" style="color:var(--info)">—</strong>
+      </div>
+      <div style="display:flex; justify-content:space-between;">
+        <span style="color:var(--text-gray)">تاريخ آخر حركة تبرع مسجلة:</span>
+        <strong id="dp-last-date" style="color:var(--info)">—</strong>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-donor-profile')">إغلاق النافذة</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-lab-test">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 style="font-weight:900;">🔬 إدخال النتائج الطبية للكيس المأمن</h3>
+      <button onclick="closeModal('modal-lab-test')" style="background:none; border:none; color:var(--text-white); cursor:pointer; font-size:18px;">✕</button>
+    </div>
+    <input type="hidden" id="lab-bag-id">
+    
+    <div class="lab-checker">
+      <div class="form-group"><label class="form-label">HIV (الإيدز)</label><select class="form-control" id="lab-hiv"><option value="Negative">سالب (-)</option><option value="Positive">موجب (+)</option></select></div>
+      <div class="form-group"><label class="form-label">HBV (الكبدي B)</label><select class="form-control" id="lab-hbv"><option value="Negative">سالب (-)</option><option value="Positive">موجب (+)</option></select></div>
+      <div class="form-group"><label class="form-label">HCV (الكبدي C)</label><select class="form-control" id="lab-hcv"><option value="Negative">سالب (-)</option><option value="Positive">موجب (+)</option></select></div>
+      <div class="form-group"><label class="form-label">Syphilis (الزهري)</label><select class="form-control" id="lab-syphilis"><option value="Negative">سالب (-)</option><option value="Positive">موجب (+)</option></select></div>
+      <div class="form-group"><label class="form-label">الهيموجلوبين (g/dL)</label><input type="number" step="0.1" class="form-control" id="lab-hb" value="14.5"></div>
+      <div class="form-group"><label class="form-label">فحص الفصيلة النهائي</label><select class="form-control" id="lab-type"><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div>
+    </div>
+
+    <div class="form-group" style="margin-top:1rem;">
+      <label class="form-label">ملاحظات الفحص الاستبعادية (تكتب فقط في حالة الرفض)</label>
+      <input type="text" id="lab-reason" class="form-control" placeholder="مثال: عينة غير مطابقة للشروط الطبية...">
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="submitLabResult('Rejected')">❌ رفض واستبعاد الكيس</button>
+      <button class="btn btn-primary" onclick="submitLabResult('Approved')">✅ اعتماد وإدخال للمخزن</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-donation">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 style="font-weight:900;">💉 تسجيل تبرع — إضافة كيس أو تسجيل متبرع جديد</h3>
+      <button onclick="closeModal('modal-add-donation')" style="background:none; border:none; color:var(--text-white); cursor:pointer; font-size:18px;">✕</button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">نوع الإدخال</label>
+      <div style="display:flex; gap:8px; align-items:center">
+        <label><input type="radio" name="don-mode" value="bag" checked onchange="toggleDonationMode('bag')"> إضافة كيس/أكياس</label>
+        <label><input type="radio" name="don-mode" value="donor" onchange="toggleDonationMode('donor')"> تسجيل متبرع</label>
+      </div>
+    </div>
+
+    <div id="donation-section-bag">
+      <!-- حُذف حقل اختيار المتبرع حسب طلب المستخدم -->
+      <div class="grid-2" style="margin-bottom:0;">
+        <div class="form-group"><label class="form-label">الفصيلة المبدئية (اتركها فارغة إن لم تُحدد)</label><select class="form-control" id="don-blood"><option value="">--- غير محدد ---</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div>
+        <div class="form-group"><label class="form-label">الكمية (أكياس)</label><input type="number" class="form-control" id="don-qty" value="1" min="1"></div>
+      </div>
+      <div class="grid-3" style="margin-bottom:0; gap:0.75rem;">
+        <div class="form-group"><label class="form-label">اختر الغرفة</label><select id="don-bag-room-select" class="form-control" onchange="updateBagFridgeOptions()"></select></div>
+        <div class="form-group"><label class="form-label">اختر الثلاجة</label><select id="don-bag-fridge-select" class="form-control" onchange="updateBagShelfOptions()"></select></div>
+        <div class="form-group"><label class="form-label">اختر الرف</label><select id="don-bag-shelf-select" class="form-control" onchange="updateBagStorageHint()"></select></div>
+      </div>
+      <div id="don-bag-storage-hint" style="font-size:13px; color:var(--text-gray); margin-top:0.5rem;"></div>
+    </div>
+
+    <div id="donation-section-donor" style="display:none">
+      <div class="form-group"><label class="form-label">الاسم ثلاثي</label><input type="text" id="donor-fullname" class="form-control" placeholder="الاسم الكامل"></div>
+      <div class="grid-2" style="margin-bottom:0;">
+        <div class="form-group"><label class="form-label">الرقم القومي</label><input type="text" id="donor-national" class="form-control" placeholder="مثال: 285..."/></div>
+        <div class="form-group"><label class="form-label">العمر</label><input type="number" id="donor-age" class="form-control" value="30" min="16"/></div>
+      </div>
+      <div class="form-group"><label class="form-label">رقم الهاتف</label><input type="text" id="donor-phone" class="form-control" placeholder="01xxxxxxxxx"/></div>
+      <div class="form-group"><label class="form-label">العنوان</label><input type="text" id="donor-address" class="form-control" placeholder="محافظة - مدينة - عنوان"/></div>
+      <div class="form-group"><label class="form-label">فصيلة (يترك فارغ إن لم تكن معروفة — يحددها المختبر)</label><select class="form-control" id="donor-blood"><option value="">--- غير محددة ---</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div>
+      <div class="grid-2" style="margin-bottom:0;">
+        <div class="form-group"><label class="form-label">اختر الغرفة</label><select id="donor-room-select" class="form-control" onchange="updateDonorFridgeOptions()"></select></div>
+        <div class="form-group"><label class="form-label">اختر الثلاجة</label><select id="donor-fridge-select" class="form-control" onchange="updateDonorStorageHint()"></select></div>
+      </div>
+      <div id="donor-storage-hint" style="font-size:13px; color:var(--text-gray); margin-top:0.5rem;"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-add-donation')">إلغاء</button>
+      <button class="btn btn-primary" onclick="executeAddDonation()">💾 إرسال للمعمل / إضافة للمخزن</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-edit-bag">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 style="font-weight:900;">✏️ تعديل تفاصيل كيس الدم</h3>
+      <button onclick="closeModal('modal-edit-bag')" style="background:none; border:none; color:var(--text-white); cursor:pointer; font-size:18px;">✕</button>
+    </div>
+    <div class="form-group"><label class="form-label">رقم الكيس</label><input type="text" id="edit-bag-id" class="form-control" readonly /></div>
+    <div class="grid-2" style="margin-bottom:0;">
+      <div class="form-group"><label class="form-label">المتبرع</label><input type="text" id="edit-bag-donor" class="form-control" /></div>
+      <div class="form-group"><label class="form-label">الفصيلة</label><select id="edit-bag-blood" class="form-control"><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div>
+    </div>
+    <div class="grid-2" style="margin-bottom:0;">
+      <div class="form-group"><label class="form-label">تاريخ الإضافة</label><input type="date" id="edit-bag-date" class="form-control" /></div>
+      <div class="form-group"><label class="form-label">تاريخ الصلاحية</label><input type="date" id="edit-bag-expiry" class="form-control" /></div>
+    </div>
+    <div class="form-group"><label class="form-label">الموقع</label><input type="text" id="edit-bag-location" class="form-control" /></div>
+    <div class="form-group"><label class="form-label">الحالة</label><select id="edit-bag-status" class="form-control"><option value="Approved">Approved</option><option value="Pending">Pending</option><option value="Rejected">Rejected</option></select></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-edit-bag')">إلغاء</button>
+      <button class="btn btn-primary" onclick="executeSaveBagEdit()">💾 حفظ التعديلات</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-request">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 style="font-weight:900;">🏥 إنشاء طلب تزويد دم للمستشفيات الخارجية</h3>
+      <button onclick="closeModal('modal-add-request')" style="background:none; border:none; color:var(--text-white); cursor:pointer; font-size:18px;">✕</button>
+    </div>
+    <div class="form-group" style="position:relative;">
+      <label class="form-label">اختر مستشفى من الشبكة (بحث سريع وذكي)</label>
+      <input type="text" id="req-hospital-input" class="form-control" placeholder="اكتب اسم المستشفى..." autocomplete="off" autocorrect="off" spellcheck="false" oninput="filterHospitalSuggestions(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();pickFirstHospitalSuggestion();}" />
+      <div id="hospital-suggestions" class="autocomplete-suggestions"></div>
+    </div>
+    <div class="grid-2" style="margin-bottom:0;">
+      <div class="form-group"><label class="form-label">الفصيلة المطلوبة</label><select class="form-control" id="req-blood-select"><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div>
+      <div class="form-group"><label class="form-label">الكمية (أكياس)</label><input type="number" class="form-control" id="req-qty" value="1" min="1"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">درجة الأولوية الطبية للطلب</label>
+      <select class="form-control" id="req-priority">
+        <option value="critical">🔴 حرجة — طوارئ وغرف العمليات الفورية</option>
+        <option value="high">🟠 عالية الأهمية — خلال 6 ساعات</option>
+        <option value="medium">🟡 متوسطة الاستحقاق — 24 ساعة</option>
+        <option value="low">🟢 منخفضة الأولوية — عمليات مجدولة لاحقاً</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-add-request')">إلغاء</button>
+      <button class="btn btn-primary" onclick="executeAddRequest()">📨 إرسال وبث الطلب للسيستم</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-deliver-request">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 style="font-weight:900;">🚚 تسليم طلب المستشفى</h3>
+      <button onclick="closeModal('modal-deliver-request')" style="background:none; border:none; color:var(--text-white); cursor:pointer; font-size:18px;">✕</button>
+    </div>
+    <input type="hidden" id="delivery-request-id" />
+    <div class="form-group"><label class="form-label">رقم الطلب</label><input type="text" id="delivery-request-code" class="form-control" readonly /></div>
+    <div class="form-group"><label class="form-label">المستشفى</label><input type="text" id="delivery-request-hospital" class="form-control" readonly /></div>
+    <div class="grid-2" style="margin-bottom:0;">
+      <div class="form-group"><label class="form-label">المستلم</label><input type="text" id="delivery-recipient-name" class="form-control" placeholder="اكتب اسم المستلم" /></div>
+      <div class="form-group"><label class="form-label">رقم الهاتف</label><input type="text" id="delivery-recipient-phone" class="form-control" placeholder="01xxxxxxxxx" /></div>
+    </div>
+    <div class="form-group"><label class="form-label">ملاحظات إضافية (اختياري)</label><input type="text" id="delivery-notes" class="form-control" placeholder="مثلاً: وصل لمندوب الاستقبال" /></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-deliver-request')">إلغاء</button>
+      <button class="btn btn-primary" onclick="executeRequestDelivery()">🚚 تأكيد التسليم</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-donor">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 style="font-weight:900;">👥 تسجيل متبرع جديد بقاعدة البيانات السحابية</h3>
+      <button onclick="closeModal('modal-add-donor')" style="background:none; border:none; color:var(--text-white); cursor:pointer; font-size:18px;">✕</button>
+    </div>
+    <div class="form-group"><label class="form-label">الاسم رباعي</label><input type="text" id="m-dr-name" class="form-control" placeholder="الاسم الكامل..."></div>
+    <div class="grid-2" style="margin-bottom:0;">
+      <div class="form-group"><label class="form-label">فصيلة الدم الموثقة</label><select id="m-dr-blood" class="form-control"><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div>
+      <div class="form-group"><label class="form-label">العمر السني</label><input type="number" id="m-dr-age" class="form-control" value="22"></div>
+    </div>
+    <div class="form-group"><label class="form-label">رقم الهاتف للتواصل الطارئ</label><input type="text" id="m-dr-phone" class="form-control" placeholder="01xxxxxxxxx"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-add-donor')">إلغاء</button>
+      <button class="btn btn-primary" onclick="executeAddDonor()">💾 حفظ وقيد المتبرع</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-hospital">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 style="font-weight:900;">🏥 إضافة مستشفى جديد</h3>
+      <button onclick="closeModal('modal-add-hospital')" style="background:none; border:none; color:var(--text-white); cursor:pointer; font-size:18px;">✕</button>
+    </div>
+    <div class="form-group"><label class="form-label">اسم المستشفى</label><input type="text" id="new-hospital-name" class="form-control" placeholder="مثال: مستشفى السلام العام"></div>
+    <div class="form-group"><label class="form-label">العنوان</label><input type="text" id="new-hospital-address" class="form-control" placeholder="مثال: شارع الجيش، أسيوط"></div>
+    <div class="form-group"><label class="form-label">اسم المدير</label><input type="text" id="new-hospital-manager" class="form-control" placeholder="مثال: د. أحمد سمير"></div>
+    <div class="form-group"><label class="form-label">رقم الهاتف</label><input type="text" id="new-hospital-phone" class="form-control" placeholder="مثال: 088-1234567"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modal-add-hospital')">إلغاء</button>
+      <button class="btn btn-primary" onclick="executeAddHospital()">💾 حفظ المستشفى</button>
+    </div>
+  </div>
+</div>
+
+<!-- Removed manual inventory adjust modal per user request -->
+
+<script>
+// ==================== LIVE DATA (loaded from API) — مربوطة بـ window لتحديثها من api-client ====================
+window.currentUser = null;
+window.bloodInventory = {};
+window.bloodBags = [];
+window.donors = [];
+window.requests = [];
+window.hospitals = [];
+window.hospitalDeliveryRecords = [];
+window.disposalLogs = [];
+window.auditLogs = [];
+window.notifications = [];
+window.messages = [];
+window.storageUnits = [];
+window.accounts = [];
+window.storageConfig = {
+  totalRooms: 0,
+  totalFridgesPerRoom: 0,
+  totalShelvesPerFridge: 4,
+  capacityPerShelf: 100,
+  roomNames: [],
+  details: []
+};
+window.pendingDonors = {};
+let apiLoading = false;
+let messagesPageHandled = false;
+let notificationsPageHandled = false;
+let liveSyncTimer = null;
+const LIVE_SYNC_INTERVAL_MS = 5000;
+
+var currentUser = window.currentUser;
+var bloodInventory = window.bloodInventory;
+var bloodBags = window.bloodBags;
+var donors = window.donors;
+var requests = window.requests;
+var hospitals = window.hospitals;
+var hospitalDeliveryRecords = window.hospitalDeliveryRecords;
+var disposalLogs = window.disposalLogs;
+var auditLogs = window.auditLogs;
+var notifications = window.notifications;
+var messages = window.messages;
+var storageUnits = window.storageUnits;
+var accounts = window.accounts;
+var storageConfig = window.storageConfig;
+var pendingDonors = window.pendingDonors;
+
+function getAccountRole() {
+  return (currentUser && currentUser.role) || 'lab';
+}
+
+function refreshSidebarCategoryHeaders() {
+  const nav = document.querySelector('.nav-section');
+  if (!nav) return;
+
+  let currentLabel = null;
+  let hasVisibleItemInSection = false;
+
+  Array.from(nav.children).forEach((child) => {
+    if (child.classList.contains('nav-label')) {
+      if (currentLabel && !hasVisibleItemInSection) {
+        currentLabel.style.display = 'none';
+      }
+      currentLabel = child;
+      hasVisibleItemInSection = false;
+      currentLabel.style.display = '';
+    } else if (child.classList.contains('nav-item')) {
+      if (child.style.display !== 'none') {
+        hasVisibleItemInSection = true;
+      }
+    }
+  });
+
+  if (currentLabel && !hasVisibleItemInSection) {
+    currentLabel.style.display = 'none';
+  }
+}
+
+function getRolePageAllowlist(role) {
+  if (role === 'superadmin') return null;
+  if (role === 'lab') return ['lab', 'dashboard', 'notifications', 'messages', 'profile', 'settings'];
+  if (role === 'deputy') return ['dashboard', 'lab', 'requests', 'notifications', 'messages', 'profile', 'settings', 'admin-settings'];
+  if (role === 'admin') return ['dashboard', 'inventory', 'donations', 'storage', 'donors', 'requests', 'hospitals', 'notifications', 'messages', 'profile', 'settings'];
+  return ['dashboard', 'notifications', 'messages', 'profile', 'settings'];
+}
+
+function rebindLiveDataRefs() {
+  currentUser = window.currentUser;
+  bloodInventory = window.bloodInventory;
+  bloodBags = window.bloodBags;
+  donors = window.donors;
+  requests = window.requests;
+  hospitals = window.hospitals;
+  hospitalDeliveryRecords = window.hospitalDeliveryRecords;
+  disposalLogs = window.disposalLogs;
+  auditLogs = window.auditLogs;
+  notifications = window.notifications;
+  messages = window.messages;
+  storageUnits = window.storageUnits;
+  accounts = window.accounts;
+  storageConfig = window.storageConfig;
+  pendingDonors = window.pendingDonors;
+}
+
+function isMessageSeenByUser(msg) {
+  if (!currentUser || !msg) return true;
+  const seenBy = Array.isArray(msg.seenBy) ? msg.seenBy : [];
+  return seenBy.includes(currentUser.username) || seenBy.includes(currentUser.name);
+}
+
+function isSystemBroadcastMessage(msg) {
+  const from = String(msg?.from || '').trim();
+  return from === '📢 النظام' || from.startsWith('📢 ');
+}
+
+function getChatMessages() {
+  return messages.filter((msg) => !isSystemBroadcastMessage(msg));
+}
+
+function getUnreadMessagesCount() {
+  if (!currentUser) return 0;
+  return getChatMessages().filter((msg) => !isMessageSeenByUser(msg)).length;
+}
+
+function formatBadgeCount(count) {
+  return count > 99 ? '99+' : String(count);
+}
+
+function playMessageAlertSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+    gain.gain.value = 0.08;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.12);
+  } catch (_) {}
+}
+
+function startLiveSync() {
+  stopLiveSync();
+  liveSyncTimer = setInterval(() => {
+    if (Drop4LifeAPI.isLoggedIn()) {
+      void syncFromServer({ silent: true });
+    }
+  }, LIVE_SYNC_INTERVAL_MS);
+}
+
+function stopLiveSync() {
+  if (liveSyncTimer) {
+    clearInterval(liveSyncTimer);
+    liveSyncTimer = null;
+  }
+}
+
+function notificationTimeNow() {
+  return new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+}
+
+async function postRequestNotification(title, message) {
+  if (!message) return;
+  try {
+    await Drop4LifeAPI.createNotification({
+      title,
+      type: 'request',
+      time: notificationTimeNow(),
+      message,
+      read: false
+    });
+  } catch (_) {}
+}
+
+async function syncFromServer(options = {}) {
+  const silent = options && options.silent === true;
+  if (!Drop4LifeAPI.isLoggedIn()) return;
+  if (apiLoading && silent) return;
+
+  const prevMessageIds = new Set(getChatMessages().map((msg) => msg.id).filter(Boolean));
+  const prevUnread = getUnreadMessagesCount();
+  const prevUnreadNotifications = notifications.filter((note) => !note.read).length;
+
+  apiLoading = true;
+  try {
+    const data = await Drop4LifeAPI.loadBootstrap();
+    Drop4LifeAPI.applyBootstrap(data);
+    rebindLiveDataRefs();
+    auditLogs = window.auditLogs || [];
+
+    if (silent) {
+      const newMessages = getChatMessages().filter((msg) => msg.id && !prevMessageIds.has(msg.id));
+      const isMessagesPage = document.getElementById('page-messages')?.classList.contains('active');
+      if (newMessages.length > 0) {
+        if (isMessagesPage) {
+          messagesPageHandled = false;
+          void markMessagesSeen();
+        } else if (getUnreadMessagesCount() > prevUnread) {
+          const latest = newMessages[0];
+          playMessageAlertSound();
+          triggerToast(
+            '💬 رسالة جديدة',
+            latest ? `${latest.from}: ${String(latest.text).slice(0, 80)}` : 'وصلت رسالة جديدة في المحادثة الجماعية.'
+          );
+        }
+      }
+
+      const unreadNotifications = notifications.filter((note) => !note.read).length;
+      const isNotificationsPage = document.getElementById('page-notifications')?.classList.contains('active');
+      if (!isNotificationsPage && unreadNotifications > prevUnreadNotifications) {
+        const latestNote = notifications.find((note) => !note.read);
+        playMessageAlertSound();
+        triggerToast(
+          '🔔 إشعار جديد',
+          latestNote ? `${latestNote.title}: ${String(latestNote.message).slice(0, 80)}` : 'وصل إشعار جديد.'
+        );
+      }
+    }
+
+    renderAllViews();
+  } catch (err) {
+    console.error(err);
+    if (err && err.status === 401) {
+      stopLiveSync();
+      Drop4LifeAPI.clearAuthSession();
+      currentUser = null;
+    }
+    if (!silent && typeof triggerToast === 'function') {
+      const title = err && err.status === 403 ? '⚠️ صلاحية مرفوضة' : '⚠️ خطأ في الاتصال';
+      triggerToast(title, (err && err.message) || 'تعذر تحميل البيانات من الخادم.');
+    }
+  } finally {
+    apiLoading = false;
+  }
+}
+
+// ==================== COMPATIBILITY MATRIX MAP ====================
+// Key: Patient Blood Type -> Array of allowed donor blood types
+const compatibilityMatrix = {
+  'A+':  ['A+', 'A-', 'O+', 'O-'],
+  'A-':  ['A-', 'O-'],
+  'B+':  ['B+', 'B-', 'O+', 'O-'],
+  'B-':  ['B-', 'O-'],
+  'AB+': ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+  'AB-': ['A-', 'B-', 'AB-', 'O-'],
+  'O+':  ['O+', 'O-'],
+  'O-':  ['O-']
+};
+
+// ==================== AUTHENTICATION WORKFLOW ====================
+function togglePasswordVisibility() {
+  const pInput = document.getElementById('login-password');
+  pInput.type = pInput.type === 'password' ? 'text' : 'password';
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  if (typeof window.Drop4LifeAPI === 'undefined') {
+    const errorDiv = document.getElementById('login-error');
+    errorDiv.innerText = 'تعذر تحميل ملف API. أعد تحميل الصفحة بعد تشغيل السيرفر.';
+    errorDiv.style.display = 'block';
+    return;
+  }
+  const user = document.getElementById('login-username').value.trim().toLowerCase();
+  const pass = document.getElementById('login-password').value;
+  const btn = document.getElementById('login-submit-btn');
+  const errorDiv = document.getElementById('login-error');
+
+  errorDiv.style.display = 'none';
+  btn.innerHTML = 'جاري التحقق من الخادم...';
+  btn.disabled = true;
+
+  try {
+    const account = await Drop4LifeAPI.login(user, pass);
+    if (!account || !account.username || (!account.authenticated && !account.success)) {
+      throw new Error('استجابة تسجيل الدخول غير صالحة من الخادم.');
+    }
+    window.currentUser = {
+      username: account.username,
+      role: account.role,
+      name: account.name,
+      email: account.email || '',
+      token: window.__sessionToken || account.token || ''
+    };
+    currentUser = window.currentUser;
+    Drop4LifeAPI.saveAuthSession(window.currentUser);
+    try {
+      await Drop4LifeAPI.pushAudit(user, account.role, 'تسجيل دخول ناجح', 'دخول للمنظومة عبر API.');
+    } catch (auditErr) {
+      console.warn('audit log failed', auditErr);
+    }
+    await syncFromServer();
+    buildApplicationAccess();
+    startLiveSync();
+    document.getElementById('auth-wrapper').style.display = 'none';
+    document.getElementById('app-wrapper').style.display = 'flex';
+    triggerToast('🔑 تم الدخول بنجاح', `مرحباً بك ${account.name} في Drop4Life.`);
+  } catch (err) {
+    const msg = err && err.message ? err.message : 'اسم المستخدم أو كلمة المرور غير صحيحة.';
+    errorDiv.innerText = msg;
+    errorDiv.style.display = 'block';
+  } finally {
+    btn.innerHTML = '<span>تسجيل الدخول المأمن</span>';
+    btn.disabled = false;
+  }
+}
+
+async function handleLogout() {
+  stopLiveSync();
+  if (window.currentUser) {
+    try {
+      await Drop4LifeAPI.pushAudit(window.currentUser.username, window.currentUser.role, 'تسجيل خروج', 'خروج من المنظومة.');
+    } catch (_) {}
+    try {
+      await Drop4LifeAPI.logout();
+    } catch (_) {}
+  }
+  Drop4LifeAPI.clearAuthSession();
+  currentUser = null;
+  document.getElementById('auth-wrapper').style.display = 'flex';
+  document.getElementById('app-wrapper').style.display = 'none';
+}
+
+// ==================== ROLE-BASED ACCESS CONTROL (RBAC) COMPILER ====================
+function buildApplicationAccess() {
+  // Update Profile Footer UI
+  document.getElementById('user-display-name').innerText = currentUser.name;
+  const role = getAccountRole();
+  document.getElementById('user-display-role').innerText = role.toUpperCase();
+  document.getElementById('user-avatar').innerText = currentUser.name.substring(0, 2);
+
+  const accountRole = role;
+  const allowedPages = getRolePageAllowlist(role);
+  
+  // Backup system button strict protection
+  const backupBtn = document.getElementById('btn-backup');
+  if (backupBtn) backupBtn.style.display = (role === 'superadmin') ? 'inline-flex' : 'none';
+  // Fast donation action button restrictions
+  const quickDonationBtn = document.getElementById('btn-quick-donation');
+  if (quickDonationBtn) quickDonationBtn.style.display = (role === 'superadmin' || role === 'admin') ? 'inline-flex' : 'none';
+
+  // Sidebar Menu Filter Engine (account role)
+  const navItems = document.querySelectorAll('.nav-item');
+  navItems.forEach(item => {
+    const pageTarget = item.dataset.pages;
+    const accessGranted = allowedPages === null || allowedPages.includes(pageTarget);
+    item.style.display = accessGranted ? 'flex' : 'none';
+  });
+  refreshSidebarCategoryHeaders();
+
+  const profileSettingsItem = document.querySelector('.profile-menu-item-settings');
+  if(profileSettingsItem) profileSettingsItem.style.display = (accountRole === 'superadmin' || accountRole === 'deputy') ? 'block' : 'none';
+
+  // Reset to default page for every account to the dashboard
+  const defaultPage = 'dashboard';
+  const activeBtn = document.querySelector(`.nav-item[data-pages="${defaultPage}"]`);
+  switchPage(defaultPage, activeBtn);
+}
+
+// ==================== SYSTEM ENGINE & NAVIGATION ====================
+function switchPage(pageId, btnElement) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const pageEl = document.getElementById('page-' + pageId);
+  if (!pageEl) return;
+  pageEl.classList.add('active');
+
+  if (pageId === 'messages') messagesPageHandled = false;
+  if (pageId === 'notifications') notificationsPageHandled = false;
+
+  if (!btnElement) {
+    btnElement = document.querySelector(`.nav-item[data-pages="${pageId}"]`);
+  }
+  if (btnElement) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    btnElement.classList.add('active');
+  }
+
+  const titles = {
+    dashboard: 'لوحة الرقابة الموحدة', statistics: 'لوحة إحصائيات الأداء', inventory: 'جرد وحوكمة المخزون الكلي',
+    requests: 'مركز طلبات الصرف اللوجستي', donors: 'قاعدة المتبرعين الطبية',
+    hospitals: 'المنشآت والمستشفيات المرتبطة شبكياً', audit: 'سجلات تدقيق أمان المنظومة',
+    disposal: 'مخلفات الاتلاف البيولوجي المستبعدة', storage: 'نظام التخزين والغرف والثلاجات',
+    notifications: 'لوحة الإشعارات والتنبيهات', messages: 'الرسائل والمحادثات الداخلية',
+    profile: 'الملف الشخصي وإعدادات الحساب', settings: 'إعدادات الثيم والألوان',
+    'admin-settings': '⚙️ إعدادات المسؤول العام (Super Admin)'
+  };
+  
+  document.getElementById('main-title').innerText = titles[pageId] || 'النظام الرئيسي';
+  renderAllViews();
+}
+
+// ==================== MODAL CONTROLLER ====================
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  if(id === 'modal-add-donation') {
+    if(typeof toggleDonationMode === 'function') toggleDonationMode('bag');
+    populateBagStorageSelectors();
+    populateDonorStorageSelectors();
+  }
+  if(id === 'modal-add-request') {
+    const input = document.getElementById('req-hospital-input');
+    if(input) {
+      input.value = '';
+      filterHospitalSuggestions('');
+    }
+  }
+  if(id === 'modal-edit-storage') {
+    buildStorageConfigForm();
+  }
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function toggleDonationMode(mode) {
+  const bagSec = document.getElementById('donation-section-bag');
+  const donorSec = document.getElementById('donation-section-donor');
+  if(mode === 'donor') {
+    bagSec.style.display = 'none';
+    donorSec.style.display = 'block';
+    populateDonorStorageSelectors();
+  } else {
+    bagSec.style.display = 'block';
+    donorSec.style.display = 'none';
+    populateBagStorageSelectors();
+  }
+}
+
+// ==================== VIEW ENGINE PIPELINE (RENDERERS) ====================
+function renderAllViews() {
+  calculateDashboardMetrics();
+  if (window.Drop4LifeAPI && typeof window.Drop4LifeAPI.refreshAiPredictions === 'function') {
+    window.Drop4LifeAPI.refreshAiPredictions();
+  }
+  renderBloodMatrix();
+  renderInventoryTable();
+  renderInventoryBagsTable();
+  renderDonationsTable();
+  renderLabModuleTable();
+  renderRequestsTable();
+  renderDonorsTable();
+  renderHospitalsTable();
+  renderHospitalDeliveriesTable();
+  renderAuditTable();
+  const auditSearch = document.getElementById('audit-search');
+  if(auditSearch && !auditSearch.dataset.bound) { auditSearch.addEventListener('input', renderAuditTable); auditSearch.dataset.bound = '1'; }
+  renderDisposalTable();
+  renderStoragePage();
+  renderStatisticsPage();
+  renderNotificationsPage();
+  renderMessagesPage();
+  renderProfilePage();
+  renderAdminSettingsPage();
+}
+
+function renderStatisticsPage() {
+  const bloodCtx = document.getElementById('chart-blood-group-donut');
+  const requestCtx = document.getElementById('chart-request-types');
+  const labCtx = document.getElementById('chart-lab-outcomes');
+  if(!bloodCtx || !requestCtx || !labCtx) return;
+
+  const bloodLabels = Object.keys(bloodInventory);
+  const bloodValues = bloodLabels.map(type => bloodInventory[type]?.available || 0);
+  const requestLabels = ['عادي', 'هام', 'حرج'];
+  const requestCounts = [
+    requests.filter(r => r.priority === 'normal').length,
+    requests.filter(r => r.priority === 'urgent').length,
+    requests.filter(r => r.priority === 'critical').length
+  ];
+  const labLabels = ['قيد الفحص', 'معتمد', 'مرفوض'];
+  const labCounts = [
+    bloodBags.filter(b => b.status === 'Pending').length,
+    bloodBags.filter(b => b.status === 'Approved').length,
+    bloodBags.filter(b => b.status === 'Rejected').length
+  ];
+
+  window.statisticsCharts = window.statisticsCharts || {};
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { boxWidth: 12, padding: 14 } }
+    }
+  };
+
+  if(!window.statisticsCharts.bloodGroup) {
+    window.statisticsCharts.bloodGroup = new Chart(bloodCtx, {
+      type: 'doughnut',
+      data: {
+        labels: bloodLabels,
+        datasets: [{
+          data: bloodValues,
+          backgroundColor: ['#D23B4A', '#F59E0B', '#2563EB', '#9341B8', '#10B981', '#F43F5E', '#0284C7', '#F97316'],
+          borderWidth: 1
+        }]
+      },
+      options: chartOptions
+    });
+  } else {
+    window.statisticsCharts.bloodGroup.data.labels = bloodLabels;
+    window.statisticsCharts.bloodGroup.data.datasets[0].data = bloodValues;
+    window.statisticsCharts.bloodGroup.update();
+  }
+
+  if(!window.statisticsCharts.requestTypes) {
+    window.statisticsCharts.requestTypes = new Chart(requestCtx, {
+      type: 'bar',
+      data: {
+        labels: requestLabels,
+        datasets: [{
+          label: 'الطلبات',
+          data: requestCounts,
+          backgroundColor: ['#34D399', '#F59E0B', '#EF4444']
+        }]
+      },
+      options: {
+        ...chartOptions,
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0 } }
+        }
+      }
+    });
+  } else {
+    window.statisticsCharts.requestTypes.data.datasets[0].data = requestCounts;
+    window.statisticsCharts.requestTypes.update();
+  }
+
+  if(!window.statisticsCharts.labOutcomes) {
+    window.statisticsCharts.labOutcomes = new Chart(labCtx, {
+      type: 'pie',
+      data: {
+        labels: labLabels,
+        datasets: [{
+          data: labCounts,
+          backgroundColor: ['#60A5FA', '#34D399', '#F87171']
+        }]
+      },
+      options: chartOptions
+    });
+  } else {
+    window.statisticsCharts.labOutcomes.data.datasets[0].data = labCounts;
+    window.statisticsCharts.labOutcomes.update();
+  }
+}
+
+function calculateDashboardMetrics() {
+  let totalVol = 0;
+  let lowCount = 0;
+  Object.keys(bloodInventory).forEach(type => {
+    const vol = bloodInventory[type].available;
+    totalVol += vol;
+    if(vol <= bloodInventory[type].criticalLimit) lowCount++;
+  });
+
+  document.getElementById('stat-total-units').innerText = totalVol + " كيس";
+  document.getElementById('stat-total-donors').innerText = donors.length + " مستخدم";
+  
+  const pendingLab = bloodBags.filter(b => b.status === 'Pending').length;
+  document.getElementById('stat-pending-lab').innerText = pendingLab;
+  document.getElementById('badge-lab-pending').innerText = pendingLab;
+  
+  const pendingReqs = requests.filter(r => r.status === 'Pending' || r.status === 'In-Progress').length;
+  document.getElementById('stat-pending-requests').innerText = pendingReqs;
+  document.getElementById('badge-low-count').innerText = lowCount;
+  updateRequestsNavBadge();
+
+  // Manage Banner Broadcast View
+  document.getElementById('critical-alert-banner').style.display = (lowCount > 0) ? 'flex' : 'none';
+}
+
+function renderBloodMatrix() {
+  const grid = document.getElementById('dashboard-blood-matrix');
+  if(!grid) return;
+  grid.innerHTML = "";
+
+  Object.keys(bloodInventory).forEach(type => {
+    const data = bloodInventory[type];
+    let glowClass = "";
+    
+    // Glowing logic rules based on dynamic stock variables
+    if(data.available <= 10) { glowClass = "glow-critical"; }
+    else if(data.available <= data.criticalLimit) { glowClass = "glow-low"; }
+
+    const pct = Math.min((data.available / 300) * 100, 100);
+    const barColor = (glowClass === "glow-critical") ? 'var(--red)' : (glowClass === "glow-low" ? 'var(--gold)' : 'var(--success)');
+
+    grid.innerHTML += `
+      <div class="card blood-card ${glowClass}" onclick="triggerToast('تقرير الفصيلة ${type}', 'المتاح حالياً: ${data.available} أكياس، المحجوز: ${data.reserved} أكياس.')">
+        <div class="b-type">${type}</div>
+        <div class="b-volume">${data.available} كيس</div>
+        <div class="b-progress">
+          <div class="b-bar" style="width: ${pct}%; background:${barColor}"></div>
+        </div>
+      </div>
+    `;
+  });
+}
+
+function renderDashboardUrgentRequests() {
+  const tbody = document.getElementById('table-dashboard-urgent');
+  if(!tbody) return;
+  
+  const urgent = requests.filter(r => r.priority === 'critical' && r.status !== 'Completed');
+  if(urgent.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-gray);">لا توجد طلبات طوارئ حرجة معلقة بالمنظومة حالياً. هندسة المخزون مستقرة.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = urgent.map(r => `
+    <tr>
+      <td><strong>${r.hospital}</strong></td>
+      <td><span class="blood-tag">${r.blood}</span></td>
+      <td><strong>${r.qty} أكياس</strong></td>
+      <td><span class="badge badge-danger">Critical طوارئ</span></td>
+      <td><button class="btn btn-primary btn-sm" onclick="executeApproveRequest('${r.id}')">✓ صرف مأمن ومباشر</button></td>
+    </tr>
+  `).join('');
+}
+
+function calculateDaysRemaining(expiryDate) {
+  const today = new Date();
+  const expiry = new Date(expiryDate);
+  const diffTime = expiry - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+}
+
+function normalizeSearch(text) {
+  return (text || '').toString().trim().toLowerCase();
+}
+
+function matchesSearchString(field, query) {
+  if(!query) return true;
+  return normalizeSearch(field).includes(query);
+}
+
+let _hospitalSuggestionMatches = [];
+
+function filterHospitalSuggestions(query) {
+  const suggestions = document.getElementById('hospital-suggestions');
+  if(!suggestions) return;
+  const normalized = normalizeSearch(query);
+  const matches = hospitals
+    .filter(h => normalizeSearch(h.name).includes(normalized) || normalizeSearch(h.address).includes(normalized) || normalizeSearch(h.phone).includes(normalized))
+    .slice(0, 8);
+
+  _hospitalSuggestionMatches = matches;
+
+  if(!normalized || matches.length === 0) {
+    suggestions.innerHTML = '';
+    suggestions.classList.remove('open');
+    return;
+  }
+
+  suggestions.innerHTML = matches.map((h, idx) => `
+    <div class="autocomplete-suggestion" data-suggestion-index="${idx}" onmousedown="event.preventDefault(); pickHospitalSuggestion(${idx})">
+      <strong>${escapeHtml(h.name)}</strong><br><small style='color:#64748B;'>${escapeHtml(h.address)} · ${escapeHtml(h.phone)}</small>
+    </div>
+  `).join('');
+  suggestions.classList.add('open');
+}
+
+function pickHospitalSuggestion(index) {
+  const match = _hospitalSuggestionMatches[index];
+  if (!match) return;
+  selectHospitalSuggestion(match.name);
+}
+
+function pickFirstHospitalSuggestion() {
+  if (_hospitalSuggestionMatches.length > 0) {
+    pickHospitalSuggestion(0);
+  }
+}
+
+function hideHospitalSuggestions() {
+  const suggestions = document.getElementById('hospital-suggestions');
+  if (suggestions) suggestions.classList.remove('open');
+}
+
+function selectHospitalSuggestion(name) {
+  const input = document.getElementById('req-hospital-input');
+  if(!input) return;
+  input.value = name;
+  hideHospitalSuggestions();
+}
+
+function isValidHospitalSelection(name) {
+  return hospitals.some(h => h.name === name);
+}
+
+function renderInventoryBagsTable() {
+  const tbody = document.getElementById('table-inventory-bags-full');
+  if(!tbody) return;
+
+  const query = normalizeSearch(document.getElementById('inventory-search')?.value || '');
+  const bloodFilter = document.getElementById('inventory-filter-blood')?.value || '';
+  const statusFilter = document.getElementById('inventory-filter-status')?.value || '';
+
+  const searchInput = document.getElementById('inventory-search');
+  if(searchInput && !searchInput.dataset.bound) {
+    searchInput.addEventListener('input', renderInventoryBagsTable);
+    searchInput.dataset.bound = '1';
+  }
+
+  let filtered = bloodBags;
+
+  if(bloodFilter) filtered = filtered.filter(b => b.bloodType === bloodFilter);
+  if(statusFilter) filtered = filtered.filter(b => b.status === statusFilter);
+
+  if(query) {
+    filtered = filtered.filter(b => {
+      return [b.id, b.bloodType, b.donor, b.location].some(field => matchesSearchString(field, query));
+    });
+  }
+
+  if(filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text-gray);">لا توجد أكياس دم مطابقة لمعايير البحث الذكي حالياً.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(b => {
+    const daysRemaining = calculateDaysRemaining(b.expiry);
+    let expiryStyle = '';
+    let statusBadge = '';
+    
+    if(daysRemaining < 0) {
+      expiryStyle = 'background:rgba(220,53,69,0.05); color:var(--red);';
+    }
+
+    if(b.status === 'Approved') statusBadge = `<span class="badge badge-success">معتمد ✅</span>`;
+    else if(b.status === 'Pending') statusBadge = `<span class="badge badge-warning">قيد الفحص ⏳</span>`;
+    else if(b.status === 'Rejected') statusBadge = `<span class="badge badge-danger">مرفوض ❌</span>`;
+
+    const canEditBag = currentUser && ['superadmin', 'lab'].includes(currentUser.role);
+    const actionCell = canEditBag
+      ? `<button class="btn btn-secondary btn-sm" onclick="openEditBagModal('${b.id}')">✏️ تعديل</button>`
+      : `<span style="color:var(--text-gray); font-size:12px;">مقيد</span>`;
+
+    return `
+      <tr style="${expiryStyle}">
+        <td style="font-family:monospace; color:var(--info); font-weight:600;"><strong>${b.id}</strong></td>
+        <td><span class="blood-tag">${b.bloodType}</span></td>
+        <td>${b.donor}</td>
+        <td>${b.date}</td>
+        <td>${b.expiry}</td>
+        <td><strong>${daysRemaining} يوم</strong></td>
+        <td>${statusBadge}</td>
+        <td style="font-size:12px; color:var(--text-gray);">${b.location}</td>
+        <td>${actionCell}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderInventoryTable() {
+  const tbody = document.getElementById('table-inventory-summary');
+  if(!tbody) return;
+
+  tbody.innerHTML = Object.keys(bloodInventory).map(type => {
+    const d = bloodInventory[type];
+    let statusBadge = `<span class="badge badge-success">آمن ومستقر</span>`;
+    if(d.available <= 10) statusBadge = `<span class="badge badge-danger">حرج للغاية</span>`;
+    else if(d.available <= d.criticalLimit) statusBadge = `<span class="badge badge-warning">تحت حد الأمان</span>`;
+
+    return `
+      <tr>
+        <td><strong style="font-size:16px;">${type}</strong></td>
+        <td><strong style="color:var(--success)">${d.available} كيس</strong></td>
+        <td><span style="color:var(--gold)">${d.reserved} كيس</span></td>
+        <td><span style="color:var(--text-gray)">${d.issued} كيس</span></td>
+        <td><span style="color:#ff4d6a">${d.expired} كيس</span></td>
+        <td>${statusBadge}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderDonationsTable() {
+  const tbody = document.getElementById('table-donations-full');
+  if(!tbody) return;
+
+  const query = normalizeSearch(document.getElementById('donations-search')?.value || '');
+  const searchInput = document.getElementById('donations-search');
+  if(searchInput && !searchInput.dataset.bound) {
+    searchInput.addEventListener('input', renderDonationsTable);
+    searchInput.dataset.bound = '1';
+  }
+
+  const filtered = bloodBags.filter(b => {
+    return [b.id, b.donor, b.bloodType, b.location, b.status].some(field => matchesSearchString(field, query));
+  });
+
+  if(filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-gray); padding:2rem;">لا توجد سجلات تبرع مطابقة للبحث الحالي.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(b => {
+    let sBadge = `<span class="badge badge-warning">بانتظار المعمل</span>`;
+    if(b.status === 'Approved') sBadge = `<span class="badge badge-success">معتمد بالمخزن</span>`;
+    if(b.status === 'Rejected') sBadge = `<span class="badge badge-danger">مرفوض ومستبعد</span>`;
+
+    return `
+      <tr>
+        <td style="font-family:monospace; color:var(--info)">${b.id}</td>
+        <td>${b.donor}</td>
+        <td><span class="blood-tag">${b.bloodType}</span></td>
+        <td>${b.qty} وحدة</td>
+        <td>${b.date}</td>
+        <td>${sBadge}</td>
+        <td><span style="font-size:11.5px; color:var(--text-gray)">${b.location}</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderLabModuleTable() {
+  const tbody = document.getElementById('table-lab-full');
+  if(!tbody) return;
+
+  const searchQuery = document.getElementById('lab-search')?.value.toLowerCase().trim() || '';
+  const statusFilter = document.getElementById('lab-filter-status')?.value || '';
+  
+  // Bind search event listener
+  const searchInput = document.getElementById('lab-search');
+  if(searchInput && !searchInput.dataset.bound) {
+    searchInput.addEventListener('input', renderLabModuleTable);
+    searchInput.dataset.bound = '1';
+  }
+
+  // Update summary counts
+  const pending = bloodBags.filter(b => b.status === 'Pending').length;
+  const approved = bloodBags.filter(b => b.status === 'Approved').length;
+  const rejected = bloodBags.filter(b => b.status === 'Rejected').length;
+  
+  const pendingEl = document.getElementById('lab-pending-count');
+  const approvedEl = document.getElementById('lab-approved-count');
+  const rejectedEl = document.getElementById('lab-rejected-count');
+  
+  if(pendingEl) pendingEl.innerText = pending;
+  if(approvedEl) approvedEl.innerText = approved;
+  if(rejectedEl) rejectedEl.innerText = rejected;
+
+  let filtered = bloodBags;
+  
+  if(statusFilter) {
+    filtered = filtered.filter(b => b.status === statusFilter);
+  } else {
+    filtered = filtered.filter(b => b.status === 'Pending');
+  }
+  
+  if(searchQuery) {
+    filtered = filtered.filter(b => {
+      const combined = `${b.id} ${b.donor}`.toLowerCase();
+      return combined.includes(searchQuery);
+    });
+  }
+
+  if(filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-gray);">لا توجد أكياس مطابقة. المختبر فارغ أو لا توجد نتائج بحث.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(b => {
+    let statusBadge = `<span class="badge badge-warning">قيد الحجز المعملي</span>`;
+    if(b.status === 'Approved') statusBadge = `<span class="badge badge-success">معتمد ✅</span>`;
+    if(b.status === 'Rejected') statusBadge = `<span class="badge badge-danger">مرفوض ❌</span>`;
+
+    return `
+      <tr>
+        <td style="font-family:monospace; color:var(--info); font-weight:600;"><strong>${b.id}</strong></td>
+        <td><strong>${b.donor}</strong></td>
+        <td><span class="blood-tag">${b.bloodType}</span></td>
+        <td>${statusBadge}</td>
+        <td style="font-size:12px;">${b.date}</td>
+        <td>
+          ${b.status === 'Pending' ? `<button class="btn btn-primary btn-sm" onclick="openLabTestWindow('${b.id}', '${b.bloodType}')">🔬 فحص وإدخال النتائج</button>` : `<span style="color:var(--text-gray); font-size:12px;">معالجة مكتملة</span>`}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderRequestsTable() {
+  const tbody = document.getElementById('table-requests-full');
+  if(!tbody) return;
+
+  const query = normalizeSearch(document.getElementById('request-search')?.value);
+  const filtered = requests.filter(r => {
+    return [r.id, r.hospital, r.blood, r.priority, r.status]
+      .some(field => matchesSearchString(field, query));
+  });
+
+  const searchInput = document.getElementById('request-search');
+  if(searchInput && !searchInput.dataset.bound) {
+    searchInput.addEventListener('input', renderRequestsTable);
+    searchInput.dataset.bound = '1';
+  }
+
+  if(filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-gray);">لم يتم العثور على طلبات تطابق معايير البحث.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(r => {
+    let pBadge = `<span class="badge badge-info">منخفضة</span>`;
+    if(r.priority === 'critical') pBadge = `<span class="badge badge-danger">🔴 Critical طوارئ</span>`;
+    if(r.priority === 'high') pBadge = `<span class="badge badge-warning">🟠 عالية</span>`;
+    if(r.priority === 'medium') pBadge = `<span class="badge badge-warning">🟡 متوسطة</span>`;
+
+    let sBadge = `<span class="badge badge-warning">قيد الموافقة</span>`;
+    if(r.status === 'In-Progress') sBadge = `<span class="badge badge-info">قيد التجهيز والتعبئة</span>`;
+    if(r.status === 'Pending Approval') sBadge = `<span class="badge badge-warning">قيد الموافقة</span>`;
+    if(r.status === 'Ready for Delivery') sBadge = `<span class="badge badge-info">تمت الموافقة — جاهز للتسليم</span>`;
+    if(r.status === 'Approved') sBadge = `<span class="badge badge-info">تمت الموافقة</span>`;
+    if(r.status === 'Rejected') sBadge = `<span class="badge badge-danger">مرفوض</span>`;
+    if(r.status === 'Completed') sBadge = `<span class="badge badge-success">تم الصرف والتسليم</span>`;
+
+    return `
+      <tr>
+        <td style="font-family:monospace;">${r.id}</td>
+        <td><strong>${r.hospital}</strong></td>
+        <td><span class="blood-tag">${r.blood}</span></td>
+        <td><strong>${r.qty} أكياس</strong></td>
+        <td>${pBadge}</td>
+        <td>${sBadge}</td>
+        <td>
+          ${r.status === 'Pending Approval' && currentUser?.role === 'superadmin' ? `<button class="btn btn-success btn-sm" onclick="approveRequest('${r.id}')">موافق</button> <button class="btn btn-danger btn-sm" onclick="rejectRequest('${r.id}')">رفض</button>` : ''}
+          ${r.status === 'Ready for Delivery' && ['admin', 'deputy', 'superadmin'].includes(currentUser?.role) ? `<button class="btn btn-primary btn-sm" onclick="openRequestDeliveryModal('${r.id}')">🚚 تسليم</button>` : ''}
+          ${r.status === 'Completed' ? `<span style="color:var(--text-gray); font-size:12px">منتهي ومعتمد</span>` : ''}
+          ${r.status === 'Rejected' ? `<span style="color:var(--text-gray); font-size:12px">مرفوض</span>` : ''}
+          ${r.status === 'Pending Approval' && currentUser?.role !== 'superadmin' ? `<span style="color:var(--text-gray); font-size:12px">قيد انتظار المدير</span>` : ''}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderDonorsTable() {
+  const tbody = document.getElementById('table-donors-full');
+  if(!tbody) return;
+
+  const query = normalizeSearch(document.getElementById('donor-search')?.value || '');
+  const filtered = donors.filter(d => {
+    return [d.id, d.name, d.blood, d.phone, d.address, d.lastDate, d.nationalId]
+      .some(field => matchesSearchString(field, query));
+  });
+
+  const searchInput = document.getElementById('donor-search');
+  if(searchInput && !searchInput.dataset.bound) {
+    searchInput.addEventListener('input', renderDonorsTable);
+    searchInput.dataset.bound = '1';
+  }
+
+  if(filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text-gray);">لم يتم العثور على متبرعين يطابقون البحث.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(d => `
+    <tr>
+      <td style="font-family:monospace;">${d.id}</td>
+      <td><strong>${d.name}</strong></td>
+      <td><span class="blood-tag">${d.blood}</span></td>
+      <td>${d.phone}</td>
+      <td>${d.age} سنة</td>
+      <td>${d.address || 'غير محدد'}</td>
+      <td>${d.lastDate || 'لا يوجد'}</td>
+      <td>${d.totalCount || 0}</td>
+      <td>
+        <button class="btn btn-secondary btn-sm" onclick="viewDonorProfileHistory('${d.id}')">👁️ بروفايل سريع</button>
+        <button class="btn btn-primary btn-sm" onclick="openDonationForExistingDonor('${d.id}')">تبرع مرة أخرى</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+  function openDonationForExistingDonor(donorId) {
+    const donor = donors.find(d => d.id === donorId);
+    if(!donor) return;
+    openModal('modal-add-donation');
+    toggleDonationMode('bag');
+    const bloodSelect = document.getElementById('don-blood');
+    const qtyInput = document.getElementById('don-qty');
+    if(bloodSelect) bloodSelect.value = donor.blood || '';
+    if(qtyInput) qtyInput.value = 1;
+    triggerToast('💉 تبرع جديد', `جهز كيس جديد للمستخدم ${donor.name} بالفصيلة ${donor.blood || 'غير محددة'}.`);
+  }
+
+function renderHospitalsTable() {
+  const tbody = document.getElementById('table-hospitals-full');
+  if(!tbody) return;
+
+  const query = normalizeSearch(document.getElementById('hospital-search')?.value);
+  const filtered = hospitals.filter(h => {
+    return [h.name, h.address, h.phone, h.manager || '']
+      .some(field => matchesSearchString(field, query));
+  });
+
+  const searchInput = document.getElementById('hospital-search');
+  if(searchInput && !searchInput.dataset.bound) {
+    searchInput.addEventListener('input', renderHospitalsTable);
+    searchInput.dataset.bound = '1';
+  }
+
+  if(filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-gray);">لم يتم العثور على مستشفيات تطابق البحث.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(h => {
+    const related = requests.filter(r => r.hospital === h.name);
+    const totalQty = related.reduce((sum, item) => sum + item.qty, 0);
+    return `
+      <tr>
+        <td><strong>${h.name}</strong><div style="font-size:12px; color:var(--text-gray); margin-top:4px;">إجمالي طلبات: ${related.length} | أكياس مطلوبة: ${totalQty}</div></td>
+        <td>${h.address}</td>
+        <td>${h.phone}</td>
+        <td>${h.manager || 'غير محدد'}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function executeAddHospital() {
+  const name = document.getElementById('new-hospital-name').value.trim();
+  const address = document.getElementById('new-hospital-address').value.trim();
+  const manager = document.getElementById('new-hospital-manager').value.trim();
+  const phone = document.getElementById('new-hospital-phone').value.trim();
+
+  if(!name || !address || !phone || !manager) {
+    alert('يرجى إدخال جميع بيانات المستشفى.');
+    return;
+  }
+
+  try {
+    await Drop4LifeAPI.createHospital({ name, address, phone, manager, status: 'Connected' });
+    await Drop4LifeAPI.pushAudit(currentUser.username, currentUser.role, 'إضافة مستشفى', name);
+    document.getElementById('new-hospital-name').value = '';
+    document.getElementById('new-hospital-address').value = '';
+    document.getElementById('new-hospital-manager').value = '';
+    document.getElementById('new-hospital-phone').value = '';
+    closeModal('modal-add-hospital');
+    await syncFromServer();
+    triggerToast('🏥 تم إضافة المستشفى', name);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+function renderHospitalDeliveriesTable() {
+  const tbody = document.getElementById('table-hospital-deliveries-full');
+  if(!tbody) return;
+
+  const query = normalizeSearch(document.getElementById('hospital-delivery-search')?.value);
+  const filtered = hospitalDeliveryRecords.filter(record => {
+    return [record.id, record.hospital, record.blood, record.recipient, record.recipientPhone, record.deliveredBy]
+      .some(field => matchesSearchString(field, query));
+  });
+
+  const searchInput = document.getElementById('hospital-delivery-search');
+  if(searchInput && !searchInput.dataset.bound) {
+    searchInput.addEventListener('input', renderHospitalDeliveriesTable);
+    searchInput.dataset.bound = '1';
+  }
+
+  if(filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-gray);">لا توجد سجلات تسليم حالياً.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(record => `
+    <tr>
+      <td style="font-family:monospace;">${record.id}</td>
+      <td><strong>${record.hospital}</strong></td>
+      <td><span class="blood-tag">${record.blood}</span></td>
+      <td>${record.qty} أكياس</td>
+      <td>${record.recipient}</td>
+      <td>${record.recipientPhone}</td>
+      <td>${record.deliveredAt}</td>
+    </tr>
+  `).join('');
+}
+
+function renderAuditTable() {
+  const tbody = document.getElementById('table-audit-full');
+  if(!tbody) return;
+
+  if (currentUser && ['admin', 'lab', 'deputy'].includes(currentUser.role)) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--red); font-weight:700; padding:2rem;">⚠️ حجب أمني: عذراً، لا تمتلك صلاحيات كافية للوصول إلى سجلات التدقيق والنظام (Audit Logs).</td></tr>`;
+    return;
+  }
+
+  const query = document.getElementById('audit-search')?.value.toLowerCase().trim() || '';
+  const filtered = auditLogs.filter(l => {
+    const combined = `${l.time} ${l.user} ${l.role} ${l.action} ${l.details}`.toLowerCase();
+    return combined.includes(query);
+  });
+
+  if(filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-gray); padding:2rem;">لا توجد سجلات مطابقة للمعايير الحالية.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(l => `
+    <tr>
+      <td style="font-family:monospace; font-size:12px;">${l.time}</td>
+      <td style="color:var(--info)"><strong>${l.user}</strong></td>
+      <td><span class="badge badge-info">${l.role}</span></td>
+      <td><strong>${l.action}</strong></td>
+      <td style="color:var(--text-gray); font-size:12.5px;">${l.details}</td>
+    </tr>
+  `).join('');
+}
+
+function renderDisposalTable() {
+  const tbody = document.getElementById('table-disposal-full');
+  if(!tbody) return;
+
+  const query = normalizeSearch(document.getElementById('disposal-search')?.value);
+  const filtered = disposalLogs.filter(l => {
+    return [l.id, l.type, l.blood, l.date, l.reason, l.worker]
+      .some(field => matchesSearchString(field, query));
+  });
+
+  const searchInput = document.getElementById('disposal-search');
+  if(searchInput && !searchInput.dataset.bound) {
+    searchInput.addEventListener('input', renderDisposalTable);
+    searchInput.dataset.bound = '1';
+  }
+
+  if(filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-gray);">لم يتم العثور على سجلات إتلاف تطابق البحث.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(l => `
+    <tr>
+      <td style="font-family:monospace; color:var(--text-gray)">${l.id}</td>
+      <td>${l.type}</td>
+      <td><span class="blood-tag">${l.blood}</span></td>
+      <td>${l.date}</td>
+      <td><span class="badge badge-danger">${l.reason}</span></td>
+      <td style="font-size:12px; color:var(--text-gray)">${l.worker}</td>
+    </tr>
+  `).join('');
+}
+
+function renderStoragePage() {
+  const container = document.getElementById('storage-grid');
+  if(!container) return;
+
+  container.innerHTML = storageUnits.map(room => {
+    const fridgeHtml = room.fridges.map(f => {
+      const pct = Math.min(Math.round((f.used / room.capacity) * 100), 100);
+      return `
+        <div class="card" style="background:rgba(255,255,255,0.92); padding:1rem; border-radius:18px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;"><strong>${f.id}</strong><span>${pct}%</span></div>
+          <div style="height:8px; background:rgba(226,232,240,0.8); border-radius:999px;"><div style="width:${pct}%; height:100%; border-radius:999px; background:${pct > 80 ? 'var(--red)' : pct > 60 ? 'var(--gold)' : 'var(--success)'}"></div></div>
+        </div>
+      `;
+    }).join('');
+
+    const roomPct = Math.min(Math.round((room.used / room.capacity) * 100), 100);
+    return `
+      <div class="card" style="padding:1rem; background:rgba(255,255,255,0.95); border-radius:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;"><h3 style="font-size:18px; margin:0;">${room.room}</h3><span class="badge ${roomPct > 80 ? 'badge-danger' : roomPct > 60 ? 'badge-warning' : 'badge-success'}">${roomPct}% شغل</span></div>
+        <div style="margin-bottom:1rem; color:var(--text-gray);">عدد الثلاجات: ${room.fridges.length}، السعة الاجمالية: ${room.capacity} وحدة.</div>
+        <div style="display:grid; gap:0.9rem;">${fridgeHtml}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function getRequestsNavBadgeCount() {
+  if (!currentUser) return 0;
+  if (currentUser.role === 'superadmin') {
+    return requests.filter(r => r.status === 'Pending Approval').length;
+  }
+  if (currentUser.role === 'admin') {
+    return requests.filter(r => r.status === 'Ready for Delivery').length;
+  }
+  if (currentUser.role === 'deputy') {
+    return requests.filter(r => r.status === 'Ready for Delivery' || r.status === 'Pending Approval').length;
+  }
+  return 0;
+}
+
+function updateRequestsNavBadge() {
+  const badge = document.getElementById('badge-requests-count');
+  if (!badge) return;
+  const count = getRequestsNavBadgeCount();
+  badge.innerText = count;
+  badge.style.display = count > 0 ? 'inline-flex' : 'none';
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function updateTopbarBadges() {
+  const sidebarMsgBadge = document.getElementById('badge-messages-count');
+  const sidebarNotifBadge = document.getElementById('badge-notifications-count');
+  const topbarMsgBadge = document.getElementById('topbar-messages-badge');
+  const topbarNotifBadge = document.getElementById('topbar-notifications-badge');
+  const isNotificationsPage = document.getElementById('page-notifications')?.classList.contains('active');
+  const isMessagesPage = document.getElementById('page-messages')?.classList.contains('active');
+
+  const unreadNotifications = notifications.filter((note) => !note.read).length;
+  const unreadMessages = getUnreadMessagesCount();
+  const showMsgBadge = !isMessagesPage && unreadMessages > 0;
+  const showNotifBadge = !isNotificationsPage && unreadNotifications > 0;
+  const msgCount = formatBadgeCount(unreadMessages);
+  const notifCount = formatBadgeCount(unreadNotifications);
+
+  if (sidebarMsgBadge) {
+    sidebarMsgBadge.innerText = msgCount;
+    sidebarMsgBadge.style.display = showMsgBadge ? 'inline-flex' : 'none';
+  }
+  if (sidebarNotifBadge) {
+    sidebarNotifBadge.innerText = notifCount;
+    sidebarNotifBadge.style.display = showNotifBadge ? 'inline-flex' : 'none';
+  }
+  if (topbarMsgBadge) {
+    topbarMsgBadge.innerText = msgCount;
+    topbarMsgBadge.style.display = showMsgBadge ? 'inline-block' : 'none';
+  }
+  if (topbarNotifBadge) {
+    topbarNotifBadge.innerText = notifCount;
+    topbarNotifBadge.style.display = showNotifBadge ? 'inline-block' : 'none';
+  }
+}
+
+async function markNotificationsRead() {
+  const unread = notifications.filter(n => !n.read && n.id);
+  if (!unread.length) return;
+  for (const note of unread) {
+    try {
+      await Drop4LifeAPI.updateNotification(note.id, {
+        title: note.title,
+        type: note.type,
+        time: note.time,
+        message: note.message,
+        read: true
+      });
+      note.read = true;
+    } catch (_) {}
+  }
+  updateTopbarBadges();
+}
+
+function renderNotificationsPage() {
+  const list = document.getElementById('notifications-list');
+  if(!list) return;
+
+  const isActive = document.getElementById('page-notifications')?.classList.contains('active');
+  if (isActive && !notificationsPageHandled) {
+    notificationsPageHandled = true;
+    void markNotificationsRead();
+  }
+  updateTopbarBadges();
+
+  if(notifications.length === 0) {
+    list.innerHTML = `<div style="padding:2rem; color:var(--text-gray);">لا توجد إشعارات حالياً.</div>`;
+    return;
+  }
+
+  list.innerHTML = `
+    ${notifications.map(note => `
+      <div class="card" style="margin-bottom:1rem; padding:1rem; background:rgba(255,255,255,0.92); border-radius:18px; ${note.read ? 'opacity:0.75;' : 'border-right:3px solid var(--red);'}">
+        <div style="display:flex; justify-content:space-between; gap:1rem; margin-bottom:0.5rem;"><strong>${escapeHtml(note.title)}</strong><span style="color:var(--text-gray); font-size:13px;">${escapeHtml(note.time)}</span></div>
+        <div style="color:var(--text-gray);">${escapeHtml(note.message)}</div>
+      </div>
+    `).join('')}
+  `;
+}
+
+async function markMessagesSeen() {
+  if (!currentUser) return;
+  const pending = getChatMessages().filter((msg) => msg.id && !isMessageSeenByUser(msg));
+  if (!pending.length) return;
+  for (const msg of pending) {
+    const seenBy = Array.isArray(msg.seenBy) ? [...msg.seenBy] : [];
+    if (!seenBy.includes(currentUser.username)) seenBy.push(currentUser.username);
+    if (!seenBy.includes(currentUser.name)) seenBy.push(currentUser.name);
+    try {
+      await Drop4LifeAPI.updateMessage(msg.id, {
+        from: msg.from,
+        time: msg.time,
+        text: msg.text,
+        seenBy
+      });
+      msg.seenBy = seenBy;
+    } catch (_) {}
+  }
+  updateTopbarBadges();
+}
+
+function getMessagesChronological() {
+  return [...getChatMessages()].reverse();
+}
+
+function buildChatMessagesHtml(chronological) {
+  const emptyChip = chronological.length === 0
+    ? '<div class="wa-date-chip">لا توجد رسائل بعد — ابدأ المحادثة الآن</div>'
+    : '';
+  const bubbles = chronological.map((msg, index) => {
+    const senderName = msg.from || 'Unknown';
+    const isSystem = isSystemBroadcastMessage(msg);
+    const isCurrentUser = currentUser && senderName === currentUser.name;
+    const bubbleClass = isSystem ? 'system' : (isCurrentUser ? 'me' : 'other');
+    const initials = senderName.split(' ').map((word) => word[0] || '').join('').slice(0, 2).toUpperCase();
+    const isSuperAdmin = currentUser && currentUser.role === 'superadmin';
+    const seenUsers = Array.isArray(msg.seenBy) ? msg.seenBy : [];
+    const othersSeen = seenUsers.some((id) => {
+      if (!currentUser) return false;
+      return id !== currentUser.username && id !== currentUser.name;
+    });
+    const ticksClass = othersSeen ? 'wa-ticks' : 'wa-ticks sent';
+    const ticks = isCurrentUser ? `<span class="${ticksClass}">${othersSeen ? '✓✓' : '✓'}</span>` : '';
+    const showSender = !isCurrentUser && !isSystem;
+    return `
+      <div class="chat-message ${bubbleClass}" data-msg-index="${index}">
+        ${showSender ? `
+          <div class="chat-sender">
+            <div class="chat-bubble-header">
+              <span class="chat-bubble-avatar">${escapeHtml(initials)}</span>
+              <strong>${escapeHtml(senderName)}</strong>
+            </div>
+          </div>
+        ` : ''}
+        <div class="chat-text">${escapeHtml(msg.text)}</div>
+        <div class="chat-meta">
+          <span>${escapeHtml(msg.time)}</span>
+          ${ticks}
+        </div>
+        ${isSuperAdmin ? `
+          <div style="margin-top:0.35rem;">
+            <button class="btn btn-secondary btn-sm" style="padding:0.35rem 0.7rem; font-size:11px;" onclick="toggleSeenDetailsForMsg(${index})">مشاهدة</button>
+            <div id="seen-users-list-${index}" style="display:none; margin-top:0.4rem; color:var(--success); font-size:11px; font-weight:600;">شوهد بواسطة: ${seenUsers.length > 0 ? seenUsers.map(escapeHtml).join(', ') : 'لم يُشاهد بعد'}</div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+  return emptyChip + bubbles;
+}
+
+function renderMessagesPage() {
+  const area = document.getElementById('messages-area');
+  if (!area) return;
+
+  const isActive = document.getElementById('page-messages')?.classList.contains('active');
+  if (isActive && currentUser && !messagesPageHandled) {
+    messagesPageHandled = true;
+    void markMessagesSeen();
+  }
+
+  updateTopbarBadges();
+
+  const chronological = getMessagesChronological();
+  const activeAccounts = accounts.filter((acc) => acc.status !== 'inactive').length;
+  const onlineLabel = activeAccounts > 0 ? `${activeAccounts} حساب نشط` : 'جميع الحسابات في السحابة';
+  const messagesHtml = buildChatMessagesHtml(chronological);
+
+  const existingScroll = area.querySelector('#wa-chat-scroll');
+  if (existingScroll) {
+    const headerSub = area.querySelector('.wa-chat-header-sub');
+    if (headerSub) headerSub.textContent = `متصل مباشرة — ${onlineLabel}`;
+
+    const wasAtBottom = existingScroll.scrollHeight - existingScroll.scrollTop - existingScroll.clientHeight < 80;
+    existingScroll.innerHTML = messagesHtml;
+    if (wasAtBottom) {
+      existingScroll.scrollTop = existingScroll.scrollHeight;
+    }
+    return;
+  }
+
+  area.innerHTML = `
+    <div class="wa-chat-shell">
+      <div class="wa-chat-header">
+        <div>
+          <div class="wa-chat-header-title">💬 محادثة Drop4Life الجماعية</div>
+          <div class="wa-chat-header-sub">متصل مباشرة — ${onlineLabel}</div>
+        </div>
+        <div class="wa-chat-live-dot" title="تحديث لحظي كل ${LIVE_SYNC_INTERVAL_MS / 1000} ثوانٍ"></div>
+      </div>
+      <div class="wa-chat-body" id="wa-chat-scroll">
+        ${messagesHtml}
+      </div>
+      <form class="wa-composer" autocomplete="off" novalidate onsubmit="event.preventDefault(); sendMessage();">
+        <input id="msg-text" type="text" class="form-control" name="drop4life-chat-message" placeholder="اكتب رسالة..." autocomplete="off" autocorrect="on" autocapitalize="sentences" spellcheck="true" data-lpignore="true" data-form-type="other" inputmode="text" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}" />
+        <button type="submit" class="wa-send-btn" title="إرسال">➤</button>
+      </form>
+    </div>
+  `;
+
+  const chatContainer = area.querySelector('#wa-chat-scroll');
+  if (chatContainer) {
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }
+}
+
+function toggleSeenDetailsForMsg(msgIndex) {
+  const detailsDiv = document.getElementById(`seen-users-list-${msgIndex}`);
+  if(detailsDiv) {
+    detailsDiv.style.display = detailsDiv.style.display === 'none' ? 'block' : 'none';
+  }
+}
+
+function renderProfilePage() {
+  if(!currentUser) return;
+  const nameInput = document.getElementById('profile-name');
+  const emailInput = document.getElementById('profile-email');
+  const roleInput = document.getElementById('profile-role');
+  if(!nameInput || !emailInput || !roleInput) return;
+
+  nameInput.value = currentUser.name;
+  emailInput.value = currentUser.email || `${currentUser.username}@drop4life.local`;
+  roleInput.value = currentUser.role;
+}
+
+
+async function sendMessage() {
+  const input = document.getElementById('msg-text');
+  if (!input || !currentUser) return;
+  const text = input.value.trim();
+  if (!text) return;
+  try {
+    await Drop4LifeAPI.createMessage({
+      from: currentUser.name,
+      time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+      text,
+      seenBy: [currentUser.username, currentUser.name]
+    });
+    input.value = '';
+    await syncFromServer();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function saveProfile() {
+  const nameInput = document.getElementById('profile-name');
+  const passwordInput = document.getElementById('profile-password');
+  if(!nameInput || !passwordInput || !currentUser) return;
+  const body = { name: nameInput.value.trim() || currentUser.name, email: currentUser.email || '' };
+  const newPassword = passwordInput.value;
+  if (newPassword) {
+    if (newPassword.length < 4) {
+      alert('كلمة المرور يجب أن تكون 4 أحرف على الأقل.');
+      return;
+    }
+    body.password = newPassword;
+  }
+  try {
+    const updated = await Drop4LifeAPI.updateProfile(body);
+    currentUser.name = updated.name || body.name;
+    currentUser.email = updated.email || body.email;
+    window.currentUser = currentUser;
+    Drop4LifeAPI.saveAuthSession(currentUser);
+    passwordInput.value = '';
+    document.getElementById('user-display-name').innerText = currentUser.name;
+    document.getElementById('user-avatar').innerText = currentUser.name.substring(0, 2);
+    await syncFromServer();
+    triggerToast('👤 تم تحديث الملف الشخصي', body.password ? 'تم حفظ التغييرات وتحديث كلمة المرور.' : 'تم حفظ التغييرات في قاعدة البيانات.');
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+function toggleProfileMenu() {
+  const menu = document.getElementById('profile-menu');
+  if (!menu) return;
+  menu.classList.toggle('open');
+}
+
+document.addEventListener('click', (event) => {
+  const wrapper = document.querySelector('.profile-menu-wrapper');
+  const menu = document.getElementById('profile-menu');
+  if (wrapper && menu && !wrapper.contains(event.target)) {
+    menu.classList.remove('open');
+  }
+  if (!event.target.closest('#req-hospital-input') && !event.target.closest('#hospital-suggestions')) {
+    hideHospitalSuggestions();
+  }
+});
+
+async function executeDispose() {
+  const bagId = document.getElementById('dispose-bag').value.trim();
+  const type = document.getElementById('dispose-type').value;
+  const reason = document.getElementById('dispose-reason').value.trim();
+  if(!bagId || !reason) { alert('يرجى إدخال كود الكيس وسبب التخلص الطبي'); return; }
+  const bag = bloodBags.find(b => b.id === bagId);
+  try {
+    await Drop4LifeAPI.dispose({
+      bagId,
+      type,
+      blood: bag ? bag.bloodType : type,
+      reason,
+      worker: currentUser.name
+    });
+    await syncFromServer();
+    triggerToast('🗑️ تم حفظ سجل التخلص', `تم تسجيل التخلص الطبي لكود ${bagId}.`);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+// ==================== TRANSACTIONAL & CLINICAL CONTROLS ====================
+function viewDonorProfileHistory(id) {
+  const d = donors.find(x => x.id === id);
+  if(!d) return;
+
+  document.getElementById('dp-title').innerText = `الملف الطبي: ${d.name}`;
+  document.getElementById('dp-count').innerText = `${d.totalCount} مرات تبرع سابقة بالمنظومة`;
+  document.getElementById('dp-last-date').innerText = d.lastDate || "لا يوجد تبرع سابق";
+  document.getElementById('dp-national').innerText = d.nationalId || 'غير محدد';
+  
+  openModal('modal-donor-profile');
+}
+
+function openLabTestWindow(bagId, bloodType) {
+  if (!['superadmin', 'lab', 'deputy'].includes(currentUser.role)) {
+    triggerToast('🛑 حجب صلاحيات الأمان', 'وحدة الفحص المعملي متاحة فقط لطاقم المختبر Laboratory Staff.');
+    return;
+  }
+  document.getElementById('lab-bag-id').value = bagId;
+  document.getElementById('lab-type').value = bloodType;
+  document.getElementById('lab-reason').value = "";
+  openModal('modal-lab-test');
+}
+
+async function submitLabResult(decision) {
+  const bagId = document.getElementById('lab-bag-id').value;
+  const bag = bloodBags.find(b => b.id === bagId);
+  if(!bag) return;
+
+  const hiv = document.getElementById('lab-hiv').value;
+  const hbv = document.getElementById('lab-hbv').value;
+  const hcv = document.getElementById('lab-hcv').value;
+  const syphilis = document.getElementById('lab-syphilis').value;
+  const hb = parseFloat(document.getElementById('lab-hb').value);
+  const finalType = document.getElementById('lab-type').value;
+  const reason = document.getElementById('lab-reason').value.trim();
+
+  let virusDetected = (hiv === 'Positive' || hbv === 'Positive' || hcv === 'Positive' || syphilis === 'Positive');
+  let lowHb = (hb < 12.0);
+
+  if (decision === 'Approved' && (virusDetected || lowHb)) {
+    alert('🚨 لا يمكن اعتماد الكيس مع نتائج إيجابية أو هبوط هيموجلوبين. تم تحويل القرار لرفض.');
+    decision = 'Rejected';
+  }
+
+  try {
+    await Drop4LifeAPI.submitLab({
+      bagId,
+      decision,
+      finalType,
+      reason: reason || 'فشل في أحد الاختبارات الفيروسية'
+    });
+    closeModal('modal-lab-test');
+    await syncFromServer();
+    if (decision === 'Approved') {
+      triggerToast('✅ تم اعتماد كيس الدم', `الفصيلة ${finalType} أُضيفت للمخزون.`);
+    } else {
+      triggerToast('🗑️ استبعاد طبي', `تم توجيه الكيس ${bagId} لسجل الإتلاف.`);
+    }
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function executeAddDonation() {
+  const mode = document.querySelector('input[name="don-mode"]:checked').value;
+
+  try {
+    if (mode === 'bag') {
+      const bType = document.getElementById('don-blood').value;
+      const qty = parseInt(document.getElementById('don-qty').value) || 1;
+      const selectedRoom = document.getElementById('don-bag-room-select').value;
+      const selectedFridge = document.getElementById('don-bag-fridge-select').value;
+      const selectedShelf = document.getElementById('don-bag-shelf-select').value;
+      if (!selectedRoom || !selectedFridge || !selectedShelf) {
+        alert('يرجى اختيار الغرفة، الثلاجة، والرف.');
+        return;
+      }
+      await Drop4LifeAPI.addDonation({
+        mode: 'bag',
+        bloodType: bType,
+        qty,
+        room: selectedRoom,
+        fridge: selectedFridge,
+        shelf: selectedShelf
+      });
+      triggerToast('💉 تم إضافة الأكياس', `تم إنشاء ${qty} كيس وإرسالها للمعمل.`);
+    } else {
+      const name = document.getElementById('donor-fullname').value.trim();
+      const national = document.getElementById('donor-national').value.trim();
+      const age = parseInt(document.getElementById('donor-age').value) || 0;
+      const phone = document.getElementById('donor-phone').value.trim();
+      const address = document.getElementById('donor-address').value.trim();
+      const knownBlood = document.getElementById('donor-blood').value;
+      const selectedRoom = document.getElementById('donor-room-select').value;
+      const selectedFridge = document.getElementById('donor-fridge-select').value;
+      if (!name || !national) { alert('يرجى إدخال الاسم والرقم القومي.'); return; }
+      if (!selectedRoom || !selectedFridge) { alert('يرجى اختيار موقع التخزين.'); return; }
+      const result = await Drop4LifeAPI.addDonation({
+        mode: 'donor',
+        name,
+        nationalId: national,
+        age,
+        phone,
+        address,
+        bloodType: knownBlood,
+        room: selectedRoom,
+        fridge: selectedFridge
+      });
+      triggerToast('👥 تم تسجيل التبرع', `الكيس ${result.bagId} في المعمل.`);
+    }
+    closeModal('modal-add-donation');
+    await syncFromServer();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+function getDonorStorageOptions() {
+  return storageUnits.map(room => ({ room: room.room, capacity: room.capacity, fridges: room.fridges }));
+}
+
+function populateDonorStorageSelectors() {
+  const roomSelect = document.getElementById('donor-room-select');
+  const fridgeSelect = document.getElementById('donor-fridge-select');
+  if(!roomSelect || !fridgeSelect) return;
+
+  roomSelect.innerHTML = storageUnits.map(room => `<option value="${room.room}">${room.room}</option>`).join('');
+  updateDonorFridgeOptions();
+}
+
+function populateBagStorageSelectors() {
+  const roomSelect = document.getElementById('don-bag-room-select');
+  const fridgeSelect = document.getElementById('don-bag-fridge-select');
+  const shelfSelect = document.getElementById('don-bag-shelf-select');
+  if(!roomSelect || !fridgeSelect || !shelfSelect) return;
+
+  roomSelect.innerHTML = storageUnits.map(room => `<option value="${room.room}">${room.room}</option>`).join('');
+  updateBagFridgeOptions();
+}
+
+function updateBagFridgeOptions() {
+  const roomSelect = document.getElementById('don-bag-room-select');
+  const fridgeSelect = document.getElementById('don-bag-fridge-select');
+  if(!roomSelect || !fridgeSelect) return;
+
+  const room = storageUnits.find(r => r.room === roomSelect.value);
+  fridgeSelect.innerHTML = room ? room.fridges.map(f => {
+    const full = f.used >= storageConfig.capacityPerShelf * storageConfig.totalShelvesPerFridge;
+    return `<option value="${f.id}" ${full ? 'disabled' : ''}>${f.id}${full ? ' (ممتلئة)' : ''}</option>`;
+  }).join('') : '';
+
+  let firstSelectable = -1;
+  for(let i=0;i<fridgeSelect.options.length;i++) {
+    if(!fridgeSelect.options[i].disabled) { firstSelectable = i; break; }
+  }
+  fridgeSelect.selectedIndex = firstSelectable >= 0 ? firstSelectable : 0;
+  updateBagShelfOptions();
+}
+
+function updateBagShelfOptions() {
+  const roomSelect = document.getElementById('don-bag-room-select');
+  const fridgeSelect = document.getElementById('don-bag-fridge-select');
+  const shelfSelect = document.getElementById('don-bag-shelf-select');
+  if(!roomSelect || !fridgeSelect || !shelfSelect) return;
+
+  const roomDetail = storageConfig.details.find(d => d.room === roomSelect.value);
+  const shelves = roomDetail?.shelves?.[fridgeSelect.value] || [];
+  shelfSelect.innerHTML = shelves.map(s => `<option value="${s}">${s}</option>`).join('');
+  updateBagStorageHint();
+}
+
+function updateBagStorageHint() {
+  const hint = document.getElementById('don-bag-storage-hint');
+  const roomSelect = document.getElementById('don-bag-room-select');
+  const fridgeSelect = document.getElementById('don-bag-fridge-select');
+  const shelfSelect = document.getElementById('don-bag-shelf-select');
+  if(!hint || !roomSelect || !fridgeSelect || !shelfSelect) return;
+
+  const room = storageUnits.find(r => r.room === roomSelect.value);
+  const fridge = room?.fridges.find(f => f.id === fridgeSelect.value);
+  const shelf = shelfSelect.value;
+  if(!room || !fridge || !shelf) {
+    hint.textContent = 'اختر الغرفة ثم الثلاجة ثم الرف لعرض السعة المتاحة.';
+    return;
+  }
+
+  const shelfUsed = getShelfUsedCount(room.room, fridge.id, shelf);
+  const full = shelfUsed >= storageConfig.capacityPerShelf;
+  const fridgeCapacity = storageConfig.capacityPerShelf * storageConfig.totalShelvesPerFridge;
+  const fridgeRemaining = Math.max(fridgeCapacity - fridge.used, 0);
+
+  if(full) {
+    hint.innerHTML = `<span style="color:var(--red);">الرف ${shelf} ممتلئ (${shelfUsed}/${storageConfig.capacityPerShelf}). اختر رفاً آخر.</span>`;
+  } else {
+    hint.innerHTML = `الرف ${shelf}: ${shelfUsed}/${storageConfig.capacityPerShelf} مستخدم. الثلاجة ${fridge.id} تبقى لها ${fridgeRemaining} كيس حتى تمتلئ.`;
+  }
+}
+
+function getShelfUsedCount(roomName, fridgeName, shelfName) {
+  return bloodBags.filter(b => {
+    const cleanLocation = b.location.replace(/^[^\w]*(?:تخزين رئيسي:\s*)?/, '').trim();
+    const parts = cleanLocation.split('/').map(x => x.trim());
+    if(parts.length < 3) return false;
+    return parts[0] === roomName && parts[1] === fridgeName && parts[2] === shelfName;
+  }).length;
+}
+
+function updateDonorFridgeOptions() {
+  const roomSelect = document.getElementById('donor-room-select');
+  const fridgeSelect = document.getElementById('donor-fridge-select');
+  if(!roomSelect || !fridgeSelect) return;
+
+  const room = storageUnits.find(r => r.room === roomSelect.value);
+  if(!room) {
+    fridgeSelect.innerHTML = '';
+    updateDonorStorageHint();
+    return;
+  }
+
+  fridgeSelect.innerHTML = room.fridges.map(f => {
+    const maxCapacity = storageConfig.capacityPerShelf * storageConfig.totalShelvesPerFridge;
+    const full = f.used >= maxCapacity;
+    return `<option value="${f.id}" ${full ? 'disabled' : ''}>${f.id}${full ? ' (ممتلئة)' : ''}</option>`;
+  }).join('');
+
+  let firstSelectable = -1;
+  for(let i=0;i<fridgeSelect.options.length;i++) {
+    if(!fridgeSelect.options[i].disabled) { firstSelectable = i; break; }
+  }
+  fridgeSelect.selectedIndex = firstSelectable >= 0 ? firstSelectable : 0;
+  updateDonorStorageHint();
+}
+
+function updateDonorStorageHint() {
+  const hint = document.getElementById('donor-storage-hint');
+  const roomSelect = document.getElementById('donor-room-select');
+  const fridgeSelect = document.getElementById('donor-fridge-select');
+  if(!hint || !roomSelect || !fridgeSelect) return;
+
+  const room = storageUnits.find(r => r.room === roomSelect.value);
+  const fridge = room?.fridges.find(f => f.id === fridgeSelect.value);
+  if(!room || !fridge) {
+    hint.textContent = 'اختر الغرفة ثم الثلاجة لعرض السعة المتوفرة.';
+    return;
+  }
+
+  const maxCapacity = storageConfig.capacityPerShelf * storageConfig.totalShelvesPerFridge;
+  const available = Math.max(maxCapacity - fridge.used, 0);
+  if(fridge.used >= maxCapacity) {
+    hint.innerHTML = `<span style="color:var(--red);">هذه الثلاجة ممتلئة. يرجى اختيار موقع آخر.</span>`;
+  } else {
+    hint.innerHTML = `متاح ${available} حقيبة في ${room.room} / ${fridge.id}.`; 
+  }
+}
+
+async function executeAddRequest() {
+  const hosp = document.getElementById('req-hospital-input').value.trim();
+  const bType = document.getElementById('req-blood-select').value;
+  const qty = parseInt(document.getElementById('req-qty').value) || 1;
+  const priority = document.getElementById('req-priority').value;
+
+  if(!hosp || !isValidHospitalSelection(hosp)) {
+    alert('يرجى اختيار مستشفى صالح من القائمة قبل إرسال الطلب.');
+    return;
+  }
+
+  const reqId = 'REQ-' + Math.floor(100 + Math.random() * 900);
+  try {
+    await Drop4LifeAPI.createRequest({
+      id: reqId,
+      hospital: hosp,
+      blood: bType,
+      qty,
+      priority,
+      status: 'Pending Approval'
+    });
+    await postRequestNotification(
+      '🏥 طلب دم جديد',
+      `${reqId}: ${hosp} — ${qty} كيس ${bType} (${priority}) — بواسطة ${currentUser.name}`
+    );
+    await Drop4LifeAPI.pushAudit(currentUser.username, currentUser.role, 'بث طلب دم خارجي', `طلب ${reqId} من ${hosp}.`);
+    closeModal('modal-add-request');
+    await syncFromServer();
+    triggerToast('📨 تم تسجيل الطلب', `رقم الطلب ${reqId}.`);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+function openEditBagModal(bagId) {
+  if(!currentUser || !['superadmin', 'lab'].includes(currentUser.role)) {
+    alert('فقط السوبر أدمن أو المختبر يمكنه تعديل بيانات الكيس.');
+    return;
+  }
+
+  const bag = bloodBags.find(item => item.id === bagId);
+  if(!bag) return;
+
+  document.getElementById('edit-bag-id').value = bag.id;
+  document.getElementById('edit-bag-donor').value = bag.donor;
+  document.getElementById('edit-bag-blood').value = bag.bloodType;
+  document.getElementById('edit-bag-date').value = bag.date;
+  document.getElementById('edit-bag-expiry').value = bag.expiry;
+  document.getElementById('edit-bag-location').value = bag.location;
+  document.getElementById('edit-bag-status').value = bag.status;
+
+  openModal('modal-edit-bag');
+}
+
+async function executeSaveBagEdit() {
+  const bagId = document.getElementById('edit-bag-id').value;
+  if(!bloodBags.find(item => item.id === bagId)) return;
+  const body = {
+    id: bagId,
+    donor: document.getElementById('edit-bag-donor').value.trim(),
+    bloodType: document.getElementById('edit-bag-blood').value,
+    date: document.getElementById('edit-bag-date').value,
+    expiry: document.getElementById('edit-bag-expiry').value,
+    location: document.getElementById('edit-bag-location').value.trim(),
+    status: document.getElementById('edit-bag-status').value,
+    qty: 1
+  };
+  try {
+    await Drop4LifeAPI.updateBloodBag(bagId, body);
+    await Drop4LifeAPI.pushAudit(currentUser.username, currentUser.role, 'تعديل بيانات كيس', `كيس ${bagId}.`);
+    closeModal('modal-edit-bag');
+    await syncFromServer();
+    triggerToast('✅ تم حفظ تعديل الكيس', `تم تحديث ${bagId} في قاعدة البيانات.`);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+function executeApproveRequest(reqId) {
+  openRequestDeliveryModal(reqId);
+}
+
+async function approveRequest(reqId) {
+  if(currentUser.role !== 'superadmin') {
+    alert('فقط السوبر أدمن يمكنه الموافقة على الطلبات.');
+    return;
+  }
+  try {
+    await Drop4LifeAPI.updateRequestStatus(reqId, 'Ready for Delivery');
+    await postRequestNotification(
+      '✅ تمت الموافقة على الطلب',
+      `${reqId} — جاهز للتسليم — بواسطة ${currentUser.name}`
+    );
+    await syncFromServer();
+    triggerToast('✅ تمت موافقة السوبر', `الطلب ${reqId} جاهز للتسليم.`);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function rejectRequest(reqId) {
+  if(currentUser.role !== 'superadmin') {
+    alert('فقط السوبر أدمن يمكنه رفض الطلبات.');
+    return;
+  }
+  try {
+    await Drop4LifeAPI.updateRequestStatus(reqId, 'Rejected');
+    await postRequestNotification(
+      '❌ تم رفض الطلب',
+      `${reqId} — بواسطة ${currentUser.name}`
+    );
+    await syncFromServer();
+    triggerToast('❌ تم رفض الطلب', `الطلب ${reqId} مرفوض.`);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+function openRequestDeliveryModal(reqId) {
+  if(!currentUser || !['superadmin', 'deputy', 'admin'].includes(currentUser.role)) {
+    triggerToast('🛑 حجب الصلاحيات الإدارية الأعلى', 'تنفيذ تسليم طلبات المستشفيات يتطلب صلاحية المشرف أو المدير أو المسؤول الإداري.');
+    return;
+  }
+
+  const req = requests.find(r => r.id === reqId);
+  if(!req) return;
+  if(req.status === 'Completed') {
+    alert('هذا الطلب تم معالجته وتسليمه مسبقاً.');
+    return;
+  }
+
+  document.getElementById('delivery-request-id').value = req.id;
+  document.getElementById('delivery-request-code').value = req.id;
+  document.getElementById('delivery-request-hospital').value = req.hospital;
+  document.getElementById('delivery-recipient-name').value = '';
+  document.getElementById('delivery-recipient-phone').value = '';
+  document.getElementById('delivery-notes').value = '';
+
+  openModal('modal-deliver-request');
+}
+
+async function executeRequestDelivery() {
+  const reqId = document.getElementById('delivery-request-id').value;
+  const recipientName = document.getElementById('delivery-recipient-name').value.trim();
+  const recipientPhone = document.getElementById('delivery-recipient-phone').value.trim();
+  const notes = document.getElementById('delivery-notes').value.trim();
+
+  if(!recipientName || !recipientPhone) {
+    alert('يرجى إدخال اسم المستلم ورقم الهاتف.');
+    return;
+  }
+
+  const req = requests.find(r => r.id === reqId);
+  if(!req) return;
+  const stock = bloodInventory[req.blood];
+  if (stock && stock.available < req.qty) {
+    let alternatives = [];
+    Object.keys(compatibilityMatrix).forEach(donorType => {
+      if (compatibilityMatrix[req.blood].includes(donorType) && bloodInventory[donorType]?.available >= req.qty) {
+        alternatives.push(donorType);
+      }
+    });
+    const altMsg = alternatives.length ? `بدائل: ${alternatives.join(', ')}` : 'لا بدائل كافية.';
+    alert(`المخزون غير كافٍ. مطلوب ${req.qty} والمتاح ${stock.available}. ${altMsg}`);
+    return;
+  }
+
+  try {
+    await Drop4LifeAPI.deliverRequest({
+      requestId: reqId,
+      recipient: recipientName,
+      recipientPhone,
+      deliveryNotes: notes,
+      deliveredBy: currentUser.name
+    });
+    closeModal('modal-deliver-request');
+    await postRequestNotification(
+      '🚚 تم تسليم الطلب',
+      `${reqId} إلى ${recipientName} — بواسطة ${currentUser.name}`
+    );
+    await syncFromServer();
+    triggerToast('🚚 تم تسجيل التسليم', `طلب ${reqId} إلى ${recipientName}.`);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function triggerBackup() {
+  try {
+    await Drop4LifeAPI.pushAudit(
+      currentUser.username,
+      currentUser.role,
+      'نسخ احتياطي',
+      'طلب نسخ احتياطي — البيانات محفوظة في db.sqlite3 على الخادم.'
+    );
+    triggerToast('🗄️ النسخ الاحتياطي', 'البيانات محفوظة في قاعدة SQLite على الخادم (db.sqlite3).');
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function pushAudit(user, role, action, details) {
+  if (!Drop4LifeAPI.isLoggedIn()) return;
+  try {
+    await Drop4LifeAPI.pushAudit(user, role, action, details);
+    if (currentUser?.role === 'superadmin') {
+      const timeStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
+      auditLogs.unshift({ time: timeStr, user, role, action, details });
+      window.auditLogs = auditLogs;
+    }
+    if (document.getElementById('table-audit-full')) renderAuditTable();
+  } catch (err) {
+    console.error('audit', err);
+    if (err && err.status === 403 && typeof triggerToast === 'function') {
+      triggerToast('⚠️ صلاحية مرفوضة', err.message);
+    }
+  }
+}
+
+function triggerToast(title, body) {
+  const box = document.getElementById('toast-box');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = `<span>🔔</span><div><strong>${title}</strong><br><small style="color:var(--text-gray); font-size:11.5px">${body}</small></div>`;
+  box.appendChild(toast);
+  setTimeout(() => { toast.remove(); }, 4000);
+}
+
+function updateLiveClock() {
+  const now = new Date();
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+  document.getElementById('live-clock').innerText = now.toLocaleString('ar-EG', options);
+}
+setInterval(updateLiveClock, 1000);
+updateLiveClock();
+
+// ==================== SUPER ADMIN: ACCOUNTS & STORAGE MANAGEMENT ====================
+
+function renderAdminSettingsPage() {
+  if(!currentUser || (currentUser.role !== 'superadmin' && currentUser.role !== 'deputy')) return;
+
+  const accountsSection = document.getElementById('admin-accounts-section');
+  if (accountsSection) {
+    accountsSection.style.display = currentUser.role === 'superadmin' ? 'block' : 'none';
+  }
+
+  if (currentUser.role === 'superadmin') renderAccountsTable();
+  renderStorageConfigDisplay();
+}
+
+function renderAccountsTable() {
+  const tbody = document.getElementById('table-accounts-full');
+  if(!tbody) return;
+
+  const query = normalizeSearch(document.getElementById('accounts-search')?.value || '');
+  const searchInput = document.getElementById('accounts-search');
+  if(searchInput && !searchInput.dataset.bound) {
+    searchInput.addEventListener('input', renderAccountsTable);
+    searchInput.dataset.bound = '1';
+  }
+
+  const filtered = accounts.filter(acc => [acc.username, acc.name, acc.role, acc.email]
+    .some(field => matchesSearchString(field, query)));
+
+  tbody.innerHTML = filtered.map(acc => {
+    const statusBadge = acc.status === 'active' ? '<span class="badge badge-success">✅ نشط</span>' : '<span class="badge badge-danger">❌ معطل</span>';
+    const roleDisplay = {'superadmin': '🔐 Super Admin', 'admin': '👨‍💼 Admin', 'deputy': '👨‍⚕️ Deputy', 'lab': '🔬 Lab'}[acc.role] || acc.role;
+    return `
+      <tr>
+        <td>${acc.username}</td>
+        <td>${acc.name}</td>
+        <td>${roleDisplay}</td>
+        <td>${acc.email}</td>
+        <td>${statusBadge}</td>
+        <td><button class="btn btn-primary btn-sm" onclick="openEditAccountModal('${acc.username}')">✏️ تحرير</button></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderStorageConfigDisplay() {
+  const container = document.getElementById('storage-config-display');
+  if(!container) return;
+
+  container.innerHTML = `
+    <div style="background:rgba(255,255,255,0.7); padding:1.2rem; border-radius:12px; border:1px solid rgba(148,163,184,0.18);">
+      <div style="font-weight:700; margin-bottom:0.8rem;">🏠 عدد الغرف: <span style="color:var(--red); font-size:16px;">${storageConfig.totalRooms}</span></div>
+      <div style="display:grid; gap:0.6rem; font-size:13px;">
+        <div>🧊 الثلاجات لكل غرفة: <strong>${storageConfig.totalFridgesPerRoom}</strong></div>
+        <div>🗂️ الأرفف لكل ثلاجة: <strong>${storageConfig.totalShelvesPerFridge}</strong></div>
+        <div>📦 السعة لكل رف: <strong>${storageConfig.capacityPerShelf}</strong> كيس</div>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,0.7); padding:1.2rem; border-radius:12px; border:1px solid rgba(148,163,184,0.18);">
+      <div style="font-weight:700; margin-bottom:0.8rem;">📋 التفاصيل:</div>
+      <div style="display:grid; gap:0.8rem; font-size:13px;">
+        ${storageConfig.details.map(det => `
+          <div style="padding:0.8rem; background:rgba(255,255,255,0.5); border-radius:8px;">
+            <div style="font-weight:600; color:var(--red);">${det.room}</div>
+            <div style="margin-top:0.4rem;">الثلاجات: ${det.fridges.join(', ')}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+async function executeAddAccount() {
+  const username = document.getElementById('new-account-username').value.trim().toLowerCase();
+  const name = document.getElementById('new-account-name').value.trim();
+  const password = document.getElementById('new-account-password').value;
+  const email = document.getElementById('new-account-email').value.trim();
+  const role = document.getElementById('new-account-role').value;
+
+  if(!username || !name || !password || !email) {
+    alert('يرجى ملء جميع الحقول المطلوبة!');
+    return;
+  }
+
+  try {
+    await Drop4LifeAPI.createAccount({ username, name, role, email, password, status: 'active' });
+    await Drop4LifeAPI.pushAudit(currentUser.username, currentUser.role, 'إضافة حساب', `${name} (${username})`);
+    document.getElementById('new-account-username').value = '';
+    document.getElementById('new-account-name').value = '';
+    document.getElementById('new-account-password').value = '';
+    document.getElementById('new-account-email').value = '';
+    document.getElementById('new-account-role').value = 'lab';
+    closeModal('modal-add-account');
+    await syncFromServer();
+    triggerToast('✅ تم إضافة حساب', username);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+function openEditAccountModal(username) {
+  const account = accounts.find(a => a.username === username);
+  if(!account) return;
+
+  document.getElementById('edit-account-username').value = username;
+  document.getElementById('edit-account-name').value = account.name;
+  document.getElementById('edit-account-email').value = account.email;
+  document.getElementById('edit-account-role').value = account.role;
+  document.getElementById('edit-account-status').value = account.status;
+  document.getElementById('edit-account-password').value = '';
+  document.getElementById('edit-account-title').innerText = `تحرير بيانات: ${account.name}`;
+  
+  openModal('modal-edit-account');
+}
+
+async function executeSaveAccount() {
+  const username = document.getElementById('edit-account-username').value;
+  const name = document.getElementById('edit-account-name').value.trim();
+  const email = document.getElementById('edit-account-email').value.trim();
+  const role = document.getElementById('edit-account-role').value;
+  const status = document.getElementById('edit-account-status').value;
+  const newPassword = document.getElementById('edit-account-password').value;
+
+  if(!name || !email) {
+    alert('يرجى ملء جميع الحقول المطلوبة!');
+    return;
+  }
+
+  const body = { name, email, role, status };
+  if (newPassword) {
+    if (newPassword.length < 4) {
+      alert('كلمة المرور يجب أن تكون 4 أحرف على الأقل.');
+      return;
+    }
+    body.password = newPassword;
+  }
+
+  try {
+    await Drop4LifeAPI.updateAccount(username, body);
+    await Drop4LifeAPI.pushAudit(currentUser.username, currentUser.role, 'تحديث حساب', username);
+    document.getElementById('edit-account-password').value = '';
+    closeModal('modal-edit-account');
+    await syncFromServer();
+    triggerToast('✅ تم حفظ التعديلات', body.password ? `${name} — تم تحديث كلمة المرور أيضاً.` : name);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function executeDeleteAccount() {
+  const username = document.getElementById('edit-account-username').value;
+  const account = accounts.find(a => a.username === username);
+  if(!account) return;
+  if(account.username === 'superadmin') {
+    alert('❌ لا يمكن حذف حساب Super Admin الرئيسي!');
+    return;
+  }
+  if(!confirm(`هل أنت متأكد من حذف حساب ${account.name}؟`)) return;
+  try {
+    await Drop4LifeAPI.deleteAccount(username);
+    await Drop4LifeAPI.pushAudit(currentUser.username, currentUser.role, 'حذف حساب', username);
+    closeModal('modal-edit-account');
+    await syncFromServer();
+    triggerToast('🗑️ تم حذف الحساب', account.name);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+function buildStorageConfigForm() {
+  const formContainer = document.getElementById('storage-config-form');
+  formContainer.innerHTML = `
+    <div class="form-group">
+      <label class="form-label">عدد الغرف</label>
+      <input type="number" id="config-total-rooms" class="form-control" value="${storageConfig.totalRooms}" min="1" max="20" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">عدد الثلاجات لكل غرفة</label>
+      <input type="number" id="config-fridges-per-room" class="form-control" value="${storageConfig.totalFridgesPerRoom}" min="1" max="10" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">عدد الأرفف لكل ثلاجة</label>
+      <input type="number" id="config-shelves-per-fridge" class="form-control" value="${storageConfig.totalShelvesPerFridge}" min="1" max="10" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">السعة لكل رف (عدد الأكياس)</label>
+      <input type="number" id="config-capacity-per-shelf" class="form-control" value="${storageConfig.capacityPerShelf}" min="10" max="500" />
+    </div>
+  `;
+}
+
+async function executeSaveStorageConfig() {
+  const totalRooms = parseInt(document.getElementById('config-total-rooms').value) || 1;
+  const fridgesPerRoom = parseInt(document.getElementById('config-fridges-per-room').value) || 1;
+  const shelvesPerFridge = parseInt(document.getElementById('config-shelves-per-fridge').value) || 1;
+  const capacityPerShelf = parseInt(document.getElementById('config-capacity-per-shelf').value) || 100;
+
+  if(totalRooms < 1 || fridgesPerRoom < 1 || shelvesPerFridge < 1 || capacityPerShelf < 10) {
+    alert('يرجى إدخال قيم صحيحة!');
+    return;
+  }
+
+  try {
+    await Drop4LifeAPI.saveStorageConfig({
+      totalRooms,
+      totalFridgesPerRoom: fridgesPerRoom,
+      totalShelvesPerFridge: shelvesPerFridge,
+      capacityPerShelf
+    });
+    await Drop4LifeAPI.pushAudit(currentUser.username, currentUser.role, 'تحديث تكوين التخزين', 'إعادة بناء الغرف والثلاجات.');
+    closeModal('modal-edit-storage');
+    await syncFromServer();
+    triggerToast('✅ تم تحديث التخزين', `${totalRooms} غرف — محفوظ في قاعدة البيانات.`);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function showAppForUser() {
+  document.getElementById('auth-wrapper').style.display = 'none';
+  document.getElementById('app-wrapper').style.display = 'flex';
+  buildApplicationAccess();
+  await syncFromServer();
+  startLiveSync();
+}
+
+async function checkAutoLogin() {
+  const restored = Drop4LifeAPI.restoreAuthSession();
+  if (restored) {
+    currentUser = window.currentUser;
+    try {
+      await showAppForUser();
+    } catch (err) {
+      Drop4LifeAPI.clearAuthSession();
+      currentUser = null;
+      if (err && err.message && typeof triggerToast === 'function') {
+        triggerToast('⚠️ انتهت الجلسة', err.message);
+      }
+    }
+    return;
+  }
+
+  currentUser = null;
+}
+
+function bootApp() {
+  if (typeof window.Drop4LifeAPI === 'undefined' || typeof window.emptyBloodInventoryTemplate !== 'function') {
+    const err = document.getElementById('login-error');
+    if (err) {
+      err.innerText = 'تعذر تحميل ملف API. تأكد من فتح http://127.0.0.1:8000/ بعد تشغيل: python manage.py runserver';
+      err.style.display = 'block';
+    }
+    console.error('Drop4LifeAPI is not defined — تحقق من تحميل /static/js/api-client.js بدون خطأ 404');
+    return;
+  }
+
+  window.bloodInventory = window.emptyBloodInventoryTemplate();
+  bloodInventory = window.bloodInventory;
+  checkAutoLogin();
+}
+
+bootApp();
+</script>
+</body>
+</html>
