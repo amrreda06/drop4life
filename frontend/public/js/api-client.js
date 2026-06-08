@@ -243,7 +243,7 @@ const Drop4LifeAPI = {
     try {
       response = await fetch(url, config);
     } catch (networkError) {
-      throw new Error('تعذر الاتصال بالخادم. تأكد أن السيرفر يعمل على http://127.0.0.1:8000');
+      throw new Error('تعذر الاتصال بالخادم. تأكد أن الخادم يعمل.');
     }
 
     const text = await response.text();

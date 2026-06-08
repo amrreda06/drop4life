@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Drop4Life — بنك الدم الذكي</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg-dark: #F6F7FB;
@@ -26,7 +24,7 @@
     --success: #18976B;
     --info: #3E75FF;
     
-    --font-main: 'Tajawal', sans-serif;
+    --font-main: 'Segoe UI', Tahoma, Arial, sans-serif;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -71,7 +69,7 @@
   #auth-wrapper {
     display: flex; align-items: center; justify-content: center;
     min-height: 100vh; padding: 20px;
-    background: url('https://images.unsplash.com/photo-1615461066841-6116ecdccd04?q=80&w=1200') no-repeat center center;
+    background: linear-gradient(135deg, rgba(210, 59, 74, 0.15) 0%, rgba(62, 117, 255, 0.12) 100%);
     background-size: cover; position: relative;
   }
   #auth-wrapper::before {
@@ -592,8 +590,8 @@
   
 
 </style>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>window.__DROP4LIFE_API_URL__ = "https://YOUR-RENDER-APP.onrender.com/api";</script>
+<script src="./js/chart.umd.min.js"></script>
+
 <script src="./js/api-client.js"></script>
 </head>
 <body>
@@ -1846,6 +1844,10 @@ function renderStatisticsPage() {
   const requestCtx = document.getElementById('chart-request-types');
   const labCtx = document.getElementById('chart-lab-outcomes');
   if(!bloodCtx || !requestCtx || !labCtx) return;
+
+  if (typeof Chart === 'undefined') {
+    return;
+  }
 
   const bloodLabels = Object.keys(bloodInventory);
   const bloodValues = bloodLabels.map(type => bloodInventory[type]?.available || 0);
@@ -3639,7 +3641,7 @@ function bootApp() {
   if (typeof window.Drop4LifeAPI === 'undefined' || typeof window.emptyBloodInventoryTemplate !== 'function') {
     const err = document.getElementById('login-error');
     if (err) {
-      err.innerText = 'تعذر تحميل ملف API. تأكد من فتح http://127.0.0.1:8000/ بعد تشغيل: python manage.py runserver';
+      err.innerText = 'تعذر تحميل ملف API. تأكد أن الخادم يعمل وأنك فتحت الموقع من نفس العنوان.';
       err.style.display = 'block';
     }
     console.error('Drop4LifeAPI is not defined — تحقق من تحميل /static/js/api-client.js بدون خطأ 404');
