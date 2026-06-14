@@ -11,11 +11,14 @@ from .models import (
     BloodInventory,
     BloodRequest,
     DisposalLog,
+    Donor,
+    Hospital,
     HospitalDeliveryRecord,
     PendingDonor,
     StorageConfig,
     StorageFridge,
     StorageRoom,
+    Notification,
 )
 
 BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
@@ -56,6 +59,105 @@ def ensure_blood_inventory():
                 'critical_limit': DEFAULT_CRITICAL_LIMITS[blood_type],
             },
         )
+
+
+@transaction.atomic
+def process_expired_bags():
+    """معالجة ذكية للأكياس منتهية الصلاحية:
+    1. ابحث عن أكياس صلاحيتها انتهت (expiry < today)
+    2. حدّث حالتها إلى 'Expired'
+    3. انقل الأكياس من available إلى expired في المخزون
+    
+    Returns:
+        dict: {'processed': count, 'details': [(blood_type, qty, bags_expired), ...]}
+    """
+    today = date.today()
+    expired_bags = BloodBag.objects.filter(
+        expiry__lt=today,
+        status__in=['Approved', 'Available', 'Pending']  # حالات لم تُحذف بعد
+    )
+    
+    expired_details = {}
+    for bag in expired_bags:
+        if bag.blood_type not in expired_details:
+            expired_details[bag.blood_type] = 0
+        expired_details[bag.blood_type] += bag.qty
+    
+    # حدّث حالة الأكياس
+    count = expired_bags.update(status='Expired')
+    
+    # حدّث المخزون
+    for blood_type, qty in expired_details.items():
+        try:
+            inv = BloodInventory.objects.get(blood_type=blood_type)
+            # انقل من available أو issued إلى expired
+            if inv.available >= qty:
+                inv.available -= qty
+            elif inv.issued >= qty:
+                inv.issued -= qty
+            else:
+                # أكياس موزعة وانتهت صلاحيتها
+                remaining = qty
+                if inv.available > 0:
+                    remaining -= inv.available
+                    inv.available = 0
+                if inv.issued > 0 and remaining > 0:
+                    inv.issued = max(0, inv.issued - remaining)
+            
+            inv.expired += qty
+            inv.save()
+        except BloodInventory.DoesNotExist:
+            pass
+    
+    return {
+        'processed': count,
+        'details': [(bt, qty) for bt, qty in expired_details.items()]
+    }
+
+
+@transaction.atomic
+def sync_inventory_from_bags():
+    """مزامنة شاملة للمخزون من واقع الأكياس:
+    - حسب الأكياس المعتمدة (Approved) = available
+    - حسب الأكياس المسلمة (Delivered) = issued
+    - حسب الأكياس منتهية (Expired) = expired
+    
+    ملاحظة: هذا للإصلاح في حالة عدم تطابق البيانات
+    
+    Returns:
+        dict: التغييرات التي تمت
+    """
+    ensure_blood_inventory()
+    results = {}
+    
+    for bt in BLOOD_TYPES:
+        available_count = BloodBag.objects.filter(blood_type=bt, status='Approved').count()
+        issued_count = BloodBag.objects.filter(blood_type=bt, status='Delivered').count()
+        expired_count = BloodBag.objects.filter(blood_type=bt, status='Expired').count()
+        
+        inv = BloodInventory.objects.get(blood_type=bt)
+        old_state = {
+            'available': inv.available,
+            'issued': inv.issued,
+            'expired': inv.expired,
+        }
+        
+        inv.available = available_count
+        inv.issued = issued_count
+        inv.expired = expired_count
+        inv.save()
+        
+        results[bt] = {
+            'before': old_state,
+            'after': {
+                'available': available_count,
+                'issued': issued_count,
+                'expired': expired_count,
+            }
+        }
+    
+    return results
+
 
 
 def reset_operational_data():
@@ -485,6 +587,18 @@ def compute_operational_summary():
         'activeBags': BloodBag.objects.exclude(status='Rejected').count(),
         'pendingLabBags': BloodBag.objects.filter(status='Pending').count(),
         'disposalRecords': DisposalLog.objects.count(),
+    }
+
+
+def compute_dashboard_stats():
+    ensure_blood_inventory()
+    totals = BloodInventory.aggregate_totals()
+    return {
+        'totalAvailableBags': totals['available'],
+        'totalDonors': Donor.objects.count(),
+        'pendingLabBags': BloodBag.objects.filter(status='Pending').count(),
+        'hospitalCount': Hospital.objects.count(),
+        'hospitalBloodRequestOrders': BloodRequest.objects.count(),
     }
 
 

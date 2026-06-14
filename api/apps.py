@@ -8,7 +8,10 @@ class ApiConfig(AppConfig):
     def ready(self):
         from django.db.utils import OperationalError, ProgrammingError
 
+        from .audit_signals import connect_audit_signals
         from .services import ensure_default_superadmin
+
+        connect_audit_signals()
 
         try:
             ensure_default_superadmin()

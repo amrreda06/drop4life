@@ -17,14 +17,46 @@ def verify_account_password(account, raw_password):
     return False
 
 
+def _apply_account_flags(user, account):
+    user.email = account.email or user.email
+    user.is_active = account.status == 'active'
+    user.is_staff = account.role in ('superadmin', 'admin')
+    user.is_superuser = account.role == 'superadmin'
+
+
 def sync_django_user_password(username, raw_password):
+    """Sync Django auth user password without running AUTH_PASSWORD_VALIDATORS."""
     normalized = str(username).strip().lower()
+    if raw_password is None:
+        return None
     try:
         user = User.objects.get(username=normalized)
     except User.DoesNotExist:
-        return
-    user.set_password(raw_password)
+        return None
+    user.password = make_password(str(raw_password))
     user.save(update_fields=['password'])
+    return user
+
+
+def ensure_django_user_for_account(account, raw_password=None):
+    """Create or update the Django auth user linked to a Drop4Life Account."""
+    normalized = str(account.username).strip().lower()
+    defaults = {
+        'email': account.email or '',
+        'is_active': account.status == 'active',
+        'is_staff': account.role in ('superadmin', 'admin'),
+        'is_superuser': account.role == 'superadmin',
+    }
+    if raw_password is not None:
+        defaults['password'] = make_password(str(raw_password))
+
+    user, created = User.objects.get_or_create(username=normalized, defaults=defaults)
+    if not created:
+        _apply_account_flags(user, account)
+        if raw_password is not None:
+            user.password = make_password(str(raw_password))
+        user.save()
+    return user
 
 
 def set_account_password(account, raw_password):
@@ -34,7 +66,7 @@ def set_account_password(account, raw_password):
     raw_password = str(raw_password)
     account.password = make_password(raw_password)
     account.save(update_fields=['password'])
-    sync_django_user_password(account.username, raw_password)
+    ensure_django_user_for_account(account, raw_password)
     return account
 
 
@@ -50,26 +82,7 @@ class Drop4LifeAccountBackend(ModelBackend):
         if not account or not verify_account_password(account, password):
             return None
 
-        user, created = User.objects.get_or_create(
-            username=normalized_username,
-            defaults={
-                'email': account.email or '',
-                'is_active': True,
-                'is_staff': account.role in ('superadmin', 'admin'),
-                'is_superuser': account.role == 'superadmin',
-            },
-        )
-        if not created:
-            user.email = account.email or user.email
-            user.is_active = True
-            user.is_staff = account.role in ('superadmin', 'admin')
-            user.is_superuser = account.role == 'superadmin'
-            user.save(update_fields=['email', 'is_active', 'is_staff', 'is_superuser'])
-
-        if created or not user.check_password(password):
-            sync_django_user_password(normalized_username, password)
-
-        return user
+        return ensure_django_user_for_account(account, password)
 
     def get_user(self, user_id):
         try:

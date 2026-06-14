@@ -1,10 +1,12 @@
 from rest_framework import serializers
+from django.db import transaction
 
-from .auth_backend import set_account_password, sync_django_user_password
+from .auth_backend import ensure_django_user_for_account, set_account_password
 from .auth_utils import get_request_account
 from .models import (
     Account,
     AuditLog,
+    Beneficiary,
     BloodBag,
     BloodInventory,
     BloodRequest,
@@ -72,7 +74,7 @@ class AccountSerializer(serializers.ModelSerializer):
 
         validated_data['password'] = make_password(password)
         account = super().create(validated_data)
-        sync_django_user_password(account.username, password)
+        ensure_django_user_for_account(account, password)
         return account
 
     def update(self, instance, validated_data):
@@ -95,9 +97,14 @@ class AccountLoginSerializer(serializers.Serializer):
 
 
 class AccountPublicSerializer(serializers.ModelSerializer):
+    is_superuser = serializers.SerializerMethodField()
+
     class Meta:
         model = Account
-        fields = ['username', 'name', 'role', 'email']
+        fields = ['username', 'name', 'role', 'email', 'is_superuser']
+
+    def get_is_superuser(self, obj):
+        return obj.role == 'superadmin'
 
 
 class ProfileUpdateSerializer(serializers.ModelSerializer):
@@ -414,6 +421,7 @@ class DisposalLogSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         return {
+            'dbId': instance.pk,
             'id': instance.bag_code,
             'type': instance.disposal_type,
             'blood': instance.blood,
@@ -442,16 +450,134 @@ class DisposalLogSerializer(serializers.ModelSerializer):
 class AuditLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = AuditLog
-        fields = ['time', 'user', 'role', 'action', 'details']
+        fields = ['id', 'time', 'user', 'role', 'action', 'details']
+
+    def to_representation(self, instance):
+        display_user = instance.user
+        if instance.account and instance.account.name:
+            display_user = instance.account.name
+        return {
+            'id': instance.pk,
+            'time': instance.time,
+            'user': display_user,
+            'role': instance.role,
+            'action': instance.action,
+            'details': instance.details,
+        }
 
     def create(self, validated_data):
         username = str(validated_data.get('user', '')).strip().lower()
         account = Account.objects.filter(username=username).first()
         if account:
             validated_data['account'] = account
-            validated_data['user'] = account.username
+            validated_data['user'] = account.name
             validated_data['role'] = account.role
         return super().create(validated_data)
+
+
+class BeneficiarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Beneficiary
+        fields = [
+            'id',
+            'name',
+            'phone',
+            'national_id',
+            'blood_type_received',
+            'bags_consumed',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def to_representation(self, instance):
+        return {
+            'id': instance.pk,
+            'name': instance.name,
+            'phone': instance.phone,
+            'nationalId': instance.national_id,
+            'bloodTypeReceived': instance.blood_type_received,
+            'bagsConsumed': instance.bags_consumed,
+            'createdAt': instance.created_at.isoformat() if instance.created_at else None,
+        }
+
+    def to_internal_value(self, data):
+        mapped = {
+            'name': data.get('name'),
+            'phone': data.get('phone'),
+            'national_id': data.get('nationalId', data.get('national_id')),
+            'blood_type_received': data.get(
+                'bloodTypeReceived', data.get('blood_type_received')
+            ),
+            'bags_consumed': data.get('bagsConsumed', data.get('bags_consumed', 1)),
+        }
+        return super().to_internal_value(mapped)
+
+    def validate_bags_consumed(self, value):
+        qty = int(value or 0)
+        if qty < 1:
+            raise serializers.ValidationError('عدد الأكياس يجب أن يكون 1 على الأقل.')
+        return qty
+
+    def create(self, validated_data):
+        blood_type = validated_data.get('blood_type_received')
+        qty = int(validated_data.get('bags_consumed', 1) or 0)
+        from .models import BloodInventory
+
+        with transaction.atomic():
+            inv = BloodInventory.objects.select_for_update().filter(blood_type=blood_type).first()
+            if not inv:
+                raise serializers.ValidationError({'bloodTypeReceived': 'فصيلة الدم غير موجودة في المخزون.'})
+            if inv.available < qty:
+                raise serializers.ValidationError({'bagsConsumed': 'عجز في المخزون لعدد الأكياس المطلوبة.'})
+            inv.available = inv.available - qty
+            inv.issued = inv.issued + qty
+            inv.save()
+            return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        old_blood = instance.blood_type_received
+        old_qty = int(instance.bags_consumed or 0)
+        new_blood = validated_data.get('blood_type_received', old_blood)
+        new_qty = int(validated_data.get('bags_consumed', old_qty) or 0)
+        from .models import BloodInventory
+
+        with transaction.atomic():
+            # same blood type, adjust by delta
+            if old_blood == new_blood:
+                delta = new_qty - old_qty
+                if delta > 0:
+                    inv = BloodInventory.objects.select_for_update().filter(blood_type=new_blood).first()
+                    if not inv:
+                        raise serializers.ValidationError({'bloodTypeReceived': 'فصيلة الدم غير موجودة في المخزون.'})
+                    if inv.available < delta:
+                        raise serializers.ValidationError({'bagsConsumed': 'عجز في المخزون لعدد الأكياس المطلوبة.'})
+                    inv.available -= delta
+                    inv.issued += delta
+                    inv.save()
+                elif delta < 0:
+                    inv = BloodInventory.objects.select_for_update().filter(blood_type=new_blood).first()
+                    if inv:
+                        inv.available += (-delta)
+                        inv.issued = max(0, inv.issued - (-delta))
+                        inv.save()
+            else:
+                # restore old blood inventory
+                inv_old = BloodInventory.objects.select_for_update().filter(blood_type=old_blood).first()
+                if inv_old:
+                    inv_old.available += old_qty
+                    inv_old.issued = max(0, inv_old.issued - old_qty)
+                    inv_old.save()
+                # deduct from new blood inventory
+                inv_new = BloodInventory.objects.select_for_update().filter(blood_type=new_blood).first()
+                if not inv_new:
+                    raise serializers.ValidationError({'bloodTypeReceived': 'فصيلة الدم الجديدة غير موجودة في المخزون.'})
+                if inv_new.available < new_qty:
+                    raise serializers.ValidationError({'bagsConsumed': 'عجز في المخزون للفصيلة الجديدة.'})
+                inv_new.available -= new_qty
+                inv_new.issued += new_qty
+                inv_new.save()
+
+            return super().update(instance, validated_data)
 
 
 class NotificationSerializer(serializers.ModelSerializer):
@@ -491,22 +617,77 @@ class NotificationSerializer(serializers.ModelSerializer):
 
 
 class MessageSerializer(serializers.ModelSerializer):
+    sender_name = serializers.SerializerMethodField()
+    seen_by_names = serializers.SerializerMethodField()
+
     class Meta:
         model = Message
-        fields = ['from_name', 'time', 'text', 'seen_by']
+        fields = ['id', 'sender_name', 'sender', 'time', 'text', 'seen_by', 'seen_by_names']
+        extra_kwargs = {
+            'sender': {'write_only': True, 'required': False},
+            'seen_by': {'required': False},
+        }
+
+    def get_sender_name(self, instance):
+        sender = instance.sender
+        if not sender:
+            return 'Unknown'
+        name = str(sender.name or '').strip()
+        if name:
+            return name
+        return sender.username
+
+    def get_seen_by_names(self, instance):
+        seen_by = instance.seen_by or []
+        if not seen_by:
+            return []
+
+        accounts = list(Account.objects.all())
+        username_to_name = {
+            acc.username.lower(): (acc.name or acc.username).strip()
+            for acc in accounts
+        }
+        registered_names = {
+            (acc.name or '').strip()
+            for acc in accounts
+            if (acc.name or '').strip()
+        }
+
+        resolved = []
+        seen = set()
+        for raw in seen_by:
+            token = str(raw or '').strip()
+            if not token:
+                continue
+            display = username_to_name.get(token.lower())
+            if not display and token in registered_names:
+                display = token
+            if not display:
+                display = token
+            if display not in seen:
+                seen.add(display)
+                resolved.append(display)
+        return resolved
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        if request:
+            account = get_request_account(request)
+            if account:
+                validated_data['sender'] = account
+        return super().create(validated_data)
 
     def to_representation(self, instance):
-        return {
-            'id': instance.pk,
-            'from': instance.from_name,
-            'time': instance.time,
-            'text': instance.text,
-            'seenBy': instance.seen_by,
-        }
+        representation = super().to_representation(instance)
+        representation.pop('sender', None)
+        if 'seen_by' in representation:
+            representation['seenBy'] = representation.pop('seen_by')
+        if 'seen_by_names' in representation:
+            representation['seenByNames'] = representation.pop('seen_by_names')
+        return representation
 
     def to_internal_value(self, data):
         mapped = {
-            'from_name': data.get('from', data.get('from_name')),
             'time': data.get('time'),
             'text': data.get('text'),
             'seen_by': data.get('seenBy', data.get('seen_by', [])),

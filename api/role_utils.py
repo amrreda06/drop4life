@@ -14,6 +14,7 @@ if settings.DEBUG:
 ROLE_API_ALLOWLIST = {
     'lab': [
         r'^/api/bootstrap/',
+        r'^/api/dashboard-stats/',
         r'^/api/ai-predictions/',
         r'^/api/pending-donors/',
         r'^/api/blood-bags/',
@@ -22,9 +23,11 @@ ROLE_API_ALLOWLIST = {
         r'^/api/notifications/',
         r'^/api/messages/',
         r'^/api/audit-logs/',
+        r'^/api/beneficiaries/',
     ],
     'deputy': [
         r'^/api/bootstrap/',
+        r'^/api/dashboard-stats/',
         r'^/api/ai-predictions/',
         r'^/api/pending-donors/',
         r'^/api/blood-bags/',
@@ -39,9 +42,12 @@ ROLE_API_ALLOWLIST = {
         r'^/api/notifications/',
         r'^/api/messages/',
         r'^/api/audit-logs/',
+        r'^/api/beneficiaries/',
+        r'^/api/dashboard-stats/',
     ],
     'admin': [
         r'^/api/bootstrap/',
+        r'^/api/dashboard-stats/',
         r'^/api/ai-predictions/',
         r'^/api/blood-inventory/',
         r'^/api/blood-bags/',
@@ -58,6 +64,7 @@ ROLE_API_ALLOWLIST = {
         r'^/api/operations/',
         r'^/api/audit-logs/',
         r'^/api/accounts/',
+        r'^/api/beneficiaries/',
     ],
 }
 

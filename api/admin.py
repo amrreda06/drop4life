@@ -3,6 +3,7 @@ from django.contrib import admin
 from .models import (
     Account,
     AuditLog,
+    Beneficiary,
     BloodBag,
     BloodInventory,
     BloodRequest,
@@ -33,3 +34,4 @@ admin.site.register(Message)
 admin.site.register(StorageRoom)
 admin.site.register(StorageFridge)
 admin.site.register(StorageConfig)
+admin.site.register(Beneficiary)

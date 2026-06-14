@@ -64,9 +64,9 @@ class BloodInventory(models.Model):
 class Donor(models.Model):
     donor_id = models.CharField(max_length=20, primary_key=True, db_column='id')
     name = models.CharField(max_length=255)
-    national_id = models.CharField(max_length=20, blank=True, default='')
+    national_id = models.CharField(max_length=20, blank=True, default='', db_index=True)
     blood = models.CharField(max_length=5)
-    phone = models.CharField(max_length=20, blank=True, default='')
+    phone = models.CharField(max_length=20, blank=True, default='', db_index=True)
     age = models.IntegerField(default=0)
     address = models.CharField(max_length=255, blank=True, default='')
     status = models.CharField(max_length=20, default='Active')
@@ -86,9 +86,9 @@ class BloodBag(models.Model):
     blood_type = models.CharField(max_length=10)
     qty = models.IntegerField(default=1)
     date = models.DateField()
-    expiry = models.DateField()
+    expiry = models.DateField(db_index=True)
     location = models.CharField(max_length=255)
-    status = models.CharField(max_length=50)
+    status = models.CharField(max_length=50, db_index=True)
 
     class Meta:
         db_table = 'api_bloodbag'
@@ -218,7 +218,13 @@ class Notification(models.Model):
 
 
 class Message(models.Model):
-    from_name = models.CharField(max_length=255)
+    sender = models.ForeignKey(
+        Account,
+        on_delete=models.CASCADE,
+        related_name='sent_messages',
+        null=True,
+        blank=True,
+    )
     time = models.CharField(max_length=20)
     text = models.TextField()
     seen_by = models.JSONField(default=list)
@@ -227,7 +233,7 @@ class Message(models.Model):
         ordering = ['-pk']
 
     def __str__(self):
-        return self.from_name
+        return self.sender.name if self.sender else self.text[:50]
 
 
 class StorageRoom(models.Model):
@@ -262,4 +268,57 @@ class StorageConfig(models.Model):
 
     def __str__(self):
         return 'Storage configuration'
+
+
+class Beneficiary(models.Model):
+    name = models.CharField(max_length=255, verbose_name='الاسم')
+    phone = models.CharField(max_length=20, verbose_name='رقم الهاتف')
+    national_id = models.CharField(max_length=20, verbose_name='رقم البطاقة')
+    blood_type_received = models.CharField(max_length=5, verbose_name='نوع الفصيلة المستهلكة')
+    bags_consumed = models.IntegerField(default=1, verbose_name='عدد الأكياس المستهلكة')
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Beneficiary'
+        verbose_name_plural = 'Beneficiaries'
+        ordering = ['-created_at', '-pk']
+
+    def __str__(self):
+        return self.name
+
+
+# Inventory restoration when a beneficiary record is deleted
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
+
+
+@receiver(post_delete, sender=Beneficiary)
+def restore_inventory_on_beneficiary_delete(sender, instance, **kwargs):
+    try:
+        inv = BloodInventory.objects.filter(blood_type=instance.blood_type_received).first()
+        if inv:
+            inv.available = inv.available + (instance.bags_consumed or 0)
+            inv.issued = max(0, inv.issued - (instance.bags_consumed or 0))
+            inv.save()
+    except Exception:
+        # swallow exceptions to avoid breaking delete flow; logging could be added
+        pass
+
+
+@receiver(post_delete, sender=BloodBag)
+def restore_inventory_on_bloodbag_delete(sender, instance, **kwargs):
+    """عند حذف كيس معتمد (Approved)، استعد الكيس إلى المخزون.
+    - إذا كان الكيس في حالة Approved: يعود إلى available
+    - إذا كان في حالة أخرى (Pending/Failed/etc): لا تأثير
+    """
+    try:
+        # فقط استعد الأكياس المعتمدة (Approved)
+        if instance.status == 'Approved':
+            inv = BloodInventory.objects.filter(blood_type=instance.blood_type).first()
+            if inv:
+                inv.available = inv.available + instance.qty
+                inv.issued = max(0, inv.issued - instance.qty)
+                inv.save()
+    except Exception:
+        pass
 

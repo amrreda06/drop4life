@@ -24,17 +24,22 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'rest_framework',
     'api.apps.ApiConfig',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'django.middleware.gzip.GZipMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'api.middleware.SessionTokenMiddleware',
+    'api.middleware.AuditActorMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -104,7 +109,7 @@ REST_FRAMEWORK = {
         'api.authentication.RequireSessionTokenAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        'api.permissions.IsAuthenticatedSession',
         'api.permissions.RoleBasedPermission',
     ],
     'DEFAULT_RENDERER_CLASSES': (
@@ -122,16 +127,63 @@ REST_FRAMEWORK = {
     ],
 }
 
-SESSION_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SECURE = os.environ.get(
+    'DJANGO_SESSION_COOKIE_SECURE',
+    'true' if not DEBUG else 'false',
+).lower() in ('1', 'true', 'yes')
+CSRF_COOKIE_SECURE = os.environ.get(
+    'DJANGO_CSRF_COOKIE_SECURE',
+    'true' if not DEBUG else 'false',
+).lower() in ('1', 'true', 'yes')
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_HTTPONLY = False
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
+_DEFAULT_CSRF_ORIGINS = (
+    'https://amrreda06.pythonanywhere.com,'
+    'http://127.0.0.1:8000,http://localhost:8000,'
+    'http://127.0.0.1:3000,http://localhost:3000'
+)
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
-    for origin in os.environ.get(
-        'CSRF_TRUSTED_ORIGINS',
-        'https://amrreda06.pythonanywhere.com',
-    ).split(',')
+    for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', _DEFAULT_CSRF_ORIGINS).split(',')
     if origin.strip()
 ]
+
+_DEFAULT_CORS_ORIGINS = (
+    'http://127.0.0.1:8000,http://localhost:8000,'
+    'http://127.0.0.1:3000,http://localhost:3000,'
+    'https://amrreda06.pythonanywhere.com'
+)
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get('CORS_ALLOWED_ORIGINS', _DEFAULT_CORS_ORIGINS).split(',')
+    if origin.strip()
+]
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
+
+SESSION_COOKIE_NAME = 'sessionid'
+SESSION_COOKIE_PATH = '/'
+SESSION_SAVE_EVERY_REQUEST = False
+
+# Basic local-memory cache for small deployments; replace with Redis/memcached in production
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'drop4life-cache',
+    }
+}

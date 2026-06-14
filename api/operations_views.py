@@ -5,14 +5,12 @@ from rest_framework.views import APIView
 from . import services
 from .auth_utils import account_context_from_request
 from .authentication import RequireSessionTokenAuthentication
-from rest_framework.permissions import IsAuthenticated
-
-from .permissions import RoleBasedPermission
+from .permissions import IsAuthenticatedSession, IsSuperAdmin, RoleBasedPermission
 
 
 class AuthenticatedOperationView(APIView):
     authentication_classes = [RequireSessionTokenAuthentication]
-    permission_classes = [IsAuthenticated, RoleBasedPermission]
+    permission_classes = [IsAuthenticatedSession, RoleBasedPermission]
 
 
 class AddDonationView(AuthenticatedOperationView):
@@ -140,3 +138,14 @@ class SaveStorageConfigView(AuthenticatedOperationView):
             return Response(StorageConfigSerializer(config).data)
         except (ValueError, TypeError) as exc:
             return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ResetSystemDataView(AuthenticatedOperationView):
+    permission_classes = [IsAuthenticatedSession, IsSuperAdmin]
+
+    def post(self, request):
+        try:
+            services.reset_operational_data()
+            return Response({'success': True, 'message': 'تمت مسح جميع بيانات التشغيل بنجاح.'})
+        except Exception as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

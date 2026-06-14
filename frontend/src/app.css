@@ -6,3 +6,46 @@ body,
   min-height: 100vh;
   font-family: 'Tajawal', sans-serif;
 }
+
+/* Table improvements for audit and other logs */
+.card .table-responsive {
+  overflow: auto;
+}
+.card table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.card table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 2;
+  text-align: left;
+  padding: 10px 12px;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.card table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+  vertical-align: top;
+}
+.audit-details {
+  max-width: 520px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-gray);
+}
+.timestamp {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.small-badge {
+  display:inline-block;
+  padding:4px 8px;
+  border-radius:12px;
+  font-size:12px;
+  background:rgba(0,0,0,0.04);
+}

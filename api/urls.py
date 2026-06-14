@@ -5,6 +5,7 @@ from .operations_views import (
     AddDonationView,
     DeliverRequestView,
     DisposeBagView,
+    ResetSystemDataView,
     SaveStorageConfigView,
     SubmitLabView,
     UpdateRequestStatusView,
@@ -13,10 +14,13 @@ from .views import (
     AccountViewSet,
     AiPredictionsView,
     AuditLogViewSet,
+    BeneficiaryViewSet,
     BloodBagViewSet,
     BloodInventoryViewSet,
     BloodRequestViewSet,
     BootstrapView,
+    DashboardStatsView,
+    LiveSyncView,
     DisposalLogViewSet,
     DonorViewSet,
     HospitalDeliveryRecordViewSet,
@@ -27,9 +31,11 @@ from .views import (
     StorageConfigViewSet,
     StorageRoomViewSet,
     TestAPIView,
+    login_view,
 )
 
 router = DefaultRouter()
+router.register(r'beneficiaries', BeneficiaryViewSet, basename='beneficiary')
 router.register(r'accounts', AccountViewSet, basename='account')
 router.register(r'blood-inventory', BloodInventoryViewSet, basename='blood-inventory')
 router.register(r'blood-bags', BloodBagViewSet, basename='blood-bag')
@@ -52,6 +58,8 @@ router.register(r'storage-config', StorageConfigViewSet, basename='storage-confi
 urlpatterns = [
     path('test/', TestAPIView.as_view(), name='api-test'),
     path('bootstrap/', BootstrapView.as_view(), name='bootstrap'),
+    path('dashboard-stats/', DashboardStatsView.as_view(), name='dashboard-stats'),
+    path('live-sync/', LiveSyncView.as_view(), name='live-sync'),
     path('ai-predictions/', AiPredictionsView.as_view(), name='ai-predictions'),
     path('operations/add-donation/', AddDonationView.as_view(), name='op-add-donation'),
     path('operations/submit-lab/', SubmitLabView.as_view(), name='op-submit-lab'),
@@ -59,5 +67,7 @@ urlpatterns = [
     path('operations/deliver-request/', DeliverRequestView.as_view(), name='op-deliver-request'),
     path('operations/update-request-status/', UpdateRequestStatusView.as_view(), name='op-request-status'),
     path('operations/save-storage-config/', SaveStorageConfigView.as_view(), name='op-storage-config'),
+    path('operations/reset-data/', ResetSystemDataView.as_view(), name='op-reset-data'),
+    path('accounts/login/', login_view, name='accounts-login'),
     path('', include(router.urls)),
 ]
