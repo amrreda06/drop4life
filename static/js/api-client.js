@@ -44,6 +44,113 @@
     return '/api';
   }
 
+  function isMutatingMethod(method) {
+    return ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+  }
+
+  function isAuditLogEndpoint(endpoint) {
+    const path = String(endpoint || '').split('?')[0].replace(/\/+$/, '/');
+    return (
+      path === '/audit-logs/' ||
+      path === '/api/audit-logs/' ||
+      path === '/operations/clear-audit-logs/' ||
+      path === '/api/operations/clear-audit-logs/'
+    );
+  }
+
+  function describeClientAction(endpoint, method) {
+    const path = String(endpoint || '').split('?')[0].replace(/\/+$/, '/');
+    const normalizedMethod = String(method || 'GET').toUpperCase();
+
+    if (path.includes('/operations/transfer-bag/')) return 'تلييل كيس دم';
+    if (path.includes('/operations/add-donation/')) return 'إضافة كيس دم';
+    if (path.includes('/operations/deliver-request/')) return 'تسليم طلب';
+    if (path.includes('/operations/dispose/')) return 'إتلاف كيس دم';
+    if (path.includes('/operations/submit-lab/')) return 'اعتماد معملي';
+    if (path.includes('/operations/update-request-status/')) return 'تحديث حالة طلب';
+    if (path.includes('/operations/save-storage-config/')) return 'تحديث إعدادات التخزين';
+    if (path.includes('/operations/reset-data/')) return 'إعادة ضبط بيانات النظام';
+    if (path.includes('/accounts/login/')) return 'تسجيل دخول';
+    if (path.includes('/accounts/logout/')) return 'تسجيل خروج';
+
+    if (path.includes('/blood-bags/')) {
+      if (normalizedMethod === 'DELETE') return 'حذف كيس دم';
+      if (normalizedMethod === 'PATCH' || normalizedMethod === 'PUT') return 'تعديل كيس دم';
+      if (normalizedMethod === 'POST') return 'إضافة كيس دم';
+    }
+    if (path.includes('/donors/')) {
+      if (normalizedMethod === 'DELETE') return 'حذف متبرع';
+      if (normalizedMethod === 'PATCH' || normalizedMethod === 'PUT') return 'تعديل متبرع';
+      if (normalizedMethod === 'POST') return 'إضافة متبرع';
+    }
+    if (path.includes('/beneficiaries/')) {
+      if (normalizedMethod === 'DELETE') return 'حذف مستفيد';
+      if (normalizedMethod === 'PATCH' || normalizedMethod === 'PUT') return 'تعديل مستفيد';
+      if (normalizedMethod === 'POST') return 'إضافة مستفيد';
+    }
+    if (path.includes('/requests/')) {
+      if (normalizedMethod === 'DELETE') return 'حذف طلب';
+      if (normalizedMethod === 'PATCH' || normalizedMethod === 'PUT') return 'تعديل طلب';
+      if (normalizedMethod === 'POST') return 'إضافة طلب';
+    }
+    if (path.includes('/hospitals/')) {
+      if (normalizedMethod === 'DELETE') return 'حذف مستشفى';
+      if (normalizedMethod === 'PATCH' || normalizedMethod === 'PUT') return 'تعديل مستشفى';
+      if (normalizedMethod === 'POST') return 'إضافة مستشفى';
+    }
+    if (path.includes('/messages/')) {
+      if (normalizedMethod === 'DELETE') return 'حذف رسالة';
+      if (normalizedMethod === 'PATCH' || normalizedMethod === 'PUT') return 'تعديل رسالة';
+      if (normalizedMethod === 'POST') return 'إرسال رسالة';
+    }
+    if (path.includes('/notifications/')) {
+      if (normalizedMethod === 'DELETE') return 'حذف إشعار';
+      if (normalizedMethod === 'PATCH' || normalizedMethod === 'PUT') return 'تعديل إشعار';
+      if (normalizedMethod === 'POST') return 'إضافة إشعار';
+    }
+    if (path.includes('/accounts/')) {
+      if (normalizedMethod === 'DELETE') return 'حذف حساب';
+      if (normalizedMethod === 'PATCH' || normalizedMethod === 'PUT') return 'تعديل حساب';
+      if (normalizedMethod === 'POST') return 'إضافة حساب';
+    }
+
+    if (normalizedMethod === 'DELETE') return 'حذف عنصر';
+    if (normalizedMethod === 'PATCH' || normalizedMethod === 'PUT') return 'تعديل عنصر';
+    if (normalizedMethod === 'POST') return 'إجراء إضافة';
+    return 'عرض بيانات';
+  }
+
+  async function sendClientAudit(endpoint, method, body, responsePayload) {
+    if (!isMutatingMethod(method) || isAuditLogEndpoint(endpoint)) return;
+    const user = global.currentUser;
+    if (!user || !user.username) return;
+
+    const action = describeClientAction(endpoint, method);
+    const now = new Date();
+    const timeStr = now.toISOString().replace('T', ' ').substring(0, 16);
+    const details = `الحساب ${user.name || user.username} نفّذ ${action}`;
+
+    try {
+      const headers = { Accept: 'application/json', 'Content-Type': 'application/json' };
+      const token = getSessionToken();
+      if (token) {
+        headers.Authorization = `Token ${token}`;
+      }
+      await fetch(`${getApiBase()}/audit-logs/`, {
+        method: 'POST',
+        headers,
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          time: timeStr,
+          user: user.name || user.username,
+          role: user.role || user.role_code || '',
+          action,
+          details,
+        }),
+      });
+    } catch (_) {}
+  }
+
   function getSessionToken() {
     try {
       const raw = sessionStorage.getItem(SESSION_KEY);
@@ -192,6 +299,10 @@
       error.status = response.status;
       error.payload = payload;
       throw error;
+    }
+
+    if (isMutatingMethod(method)) {
+      void sendClientAudit(path, method);
     }
 
     return payload;

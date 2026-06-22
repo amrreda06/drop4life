@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.sessions.backends.db import SessionStore
 
+from .auth_utils import get_request_account
 from .audit_context import clear_audit_actor, set_audit_actor
 from .models import Account
 
@@ -45,21 +46,7 @@ def _parse_authorization_token(request):
 
 
 def _account_from_request(request):
-    user = getattr(request, 'user', None)
-    if user and getattr(user, 'is_authenticated', False):
-        account = Account.objects.filter(username=user.username).first()
-        if account:
-            return account
-
-    token = _parse_authorization_token(request)
-    if not token:
-        return None
-
-    user = _user_from_session_token(token)
-    if not user:
-        return None
-
-    return Account.objects.filter(username=user.username).first()
+    return get_request_account(request)
 
 
 class SessionTokenMiddleware:

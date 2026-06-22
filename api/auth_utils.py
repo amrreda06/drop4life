@@ -8,6 +8,9 @@ from .models import Account
 User = get_user_model()
 
 
+_ACCOUNT_CACHE_ATTR = '_drop4life_account'
+
+
 def _account_from_session_token(token):
     if not token:
         return None
@@ -38,12 +41,32 @@ def _account_from_user(user):
     return Account.objects.filter(username=user.username).first()
 
 
+def _get_cached_account(request):
+    return getattr(request, _ACCOUNT_CACHE_ATTR, None)
+
+
+def _set_cached_account(request, account):
+    setattr(request, _ACCOUNT_CACHE_ATTR, account)
+    return account
+
+
 def get_request_account(request):
     django_request = _django_http_request(request)
+
+    cached_account = _get_cached_account(request)
+    if cached_account is not None:
+        return cached_account
+
+    cached_account = _get_cached_account(django_request)
+    if cached_account is not None:
+        return _set_cached_account(request, cached_account)
 
     for candidate in (request, django_request):
         account = _account_from_user(getattr(candidate, 'user', None))
         if account:
+            _set_cached_account(request, account)
+            if django_request is not request:
+                _set_cached_account(django_request, account)
             return account
 
     auth_header = django_request.META.get('HTTP_AUTHORIZATION', '')
@@ -58,7 +81,12 @@ def get_request_account(request):
     if scheme.lower() not in ('bearer', 'session', 'token') or not token:
         return None
 
-    return _account_from_session_token(token)
+    account = _account_from_session_token(token)
+    if account:
+        _set_cached_account(request, account)
+        if django_request is not request:
+            _set_cached_account(django_request, account)
+    return account
 
 
 def account_context_from_request(request, data=None):

@@ -1,8 +1,9 @@
+from django.db import models
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.forms.models import model_to_dict
 from django.utils import timezone
 
-from .audit_context import get_audit_actor
+from .audit_context import get_audit_actor, is_audit_suppressed
 from .models import AuditLog
 from .services import invalidate_runtime_caches
 
@@ -46,6 +47,109 @@ FIELD_LABELS = {
 SENSITIVE_FIELDS = {'password'}
 
 
+class AuditQuerySet(models.QuerySet):
+    def update(self, **kwargs):
+        if self.model in SKIP_MODELS or is_audit_suppressed():
+            return super().update(**kwargs)
+
+        instances = list(self)
+        if not instances:
+            return super().update(**kwargs)
+
+        old_states = {instance.pk: model_to_dict(instance) for instance in instances}
+        updated_count = super().update(**kwargs)
+
+        fresh_instances = {
+            instance.pk: instance
+            for instance in self.model._base_manager.filter(pk__in=old_states)
+        }
+        for pk, old_state in old_states.items():
+            fresh_instance = fresh_instances.get(pk)
+            if fresh_instance is None:
+                continue
+
+            new_state = model_to_dict(fresh_instance)
+            changes = _state_changes(old_state, new_state)
+            if not changes:
+                continue
+
+            _write_audit(
+                f'تعديل {_model_label(fresh_instance)}',
+                ' | '.join(changes),
+            )
+
+        if updated_count:
+            invalidate_runtime_caches()
+        return updated_count
+
+    def bulk_update(self, objs, fields, batch_size=None):
+        if self.model in SKIP_MODELS or is_audit_suppressed():
+            return super().bulk_update(objs, fields, batch_size=batch_size)
+
+        pks = [instance.pk for instance in objs if getattr(instance, 'pk', None) is not None]
+        if not pks:
+            return super().bulk_update(objs, fields, batch_size=batch_size)
+
+        old_states = {
+            instance.pk: model_to_dict(instance)
+            for instance in self.model._base_manager.filter(pk__in=pks)
+        }
+        updated_count = super().bulk_update(objs, fields, batch_size=batch_size)
+
+        fresh_instances = {
+            instance.pk: instance
+            for instance in self.model._base_manager.filter(pk__in=old_states)
+        }
+        for pk, old_state in old_states.items():
+            fresh_instance = fresh_instances.get(pk)
+            if fresh_instance is None:
+                continue
+
+            new_state = model_to_dict(fresh_instance)
+            changes = _state_changes(old_state, new_state)
+            if not changes:
+                continue
+
+            _write_audit(
+                f'تعديل {_model_label(fresh_instance)}',
+                ' | '.join(f'{_actor_info()[0]} عدّل {change}' for change in changes),
+            )
+
+        if updated_count:
+            invalidate_runtime_caches()
+        return updated_count
+
+    def bulk_create(self, objs, batch_size=None, ignore_conflicts=False, update_conflicts=False, update_fields=None, unique_fields=None):
+        if self.model in SKIP_MODELS or is_audit_suppressed():
+            return super().bulk_create(
+                objs,
+                batch_size=batch_size,
+                ignore_conflicts=ignore_conflicts,
+                update_conflicts=update_conflicts,
+                update_fields=update_fields,
+                unique_fields=unique_fields,
+            )
+
+        created_objects = super().bulk_create(
+            objs,
+            batch_size=batch_size,
+            ignore_conflicts=ignore_conflicts,
+            update_conflicts=update_conflicts,
+            update_fields=update_fields,
+            unique_fields=unique_fields,
+        )
+        for instance in created_objects:
+            _write_audit(
+                f'إنشاء {_model_label(instance)}',
+                f'{_actor_info()[0]} أنشأ {_model_label(instance)} "{_instance_identifier(instance)}"',
+            )
+        return created_objects
+
+
+class AuditManager(models.Manager.from_queryset(AuditQuerySet)):
+    pass
+
+
 def _field_label(field_name):
     return FIELD_LABELS.get(field_name, field_name)
 
@@ -81,7 +185,22 @@ def _format_value(field_name, value):
     return str(value)
 
 
+def _state_changes(old_state, new_state):
+    changes = []
+    for field, new_val in new_state.items():
+        old_val = old_state.get(field)
+        if _format_value(field, old_val) == _format_value(field, new_val):
+            continue
+        field_name = _field_label(field)
+        changes.append(
+            f'{field_name} من "{_format_value(field, old_val)}" إلى "{_format_value(field, new_val)}"'
+        )
+    return changes
+
+
 def _write_audit(action, details):
+    if is_audit_suppressed():
+        return
     actor_name, actor_role, account = _actor_info()
     now = timezone.localtime()
     AuditLog.objects.create(
@@ -95,6 +214,8 @@ def _write_audit(action, details):
 
 
 def _capture_old_state(sender, instance, **kwargs):
+    if is_audit_suppressed():
+        return
     if not instance.pk:
         instance._audit_old_state = None
         return
@@ -106,6 +227,8 @@ def _capture_old_state(sender, instance, **kwargs):
 
 
 def _log_save(sender, instance, created, **kwargs):
+    if is_audit_suppressed():
+        return
     actor_name, _, _ = _actor_info()
     label = _model_label(instance)
     identifier = _instance_identifier(instance)
@@ -119,16 +242,10 @@ def _log_save(sender, instance, created, **kwargs):
 
     old_state = getattr(instance, '_audit_old_state', None) or {}
     new_state = model_to_dict(instance)
-    changes = []
-    for field, new_val in new_state.items():
-        if field in SENSITIVE_FIELDS and _format_value(field, old_state.get(field)) == _format_value(field, new_val):
-            continue
-        old_val = old_state.get(field)
-        if _format_value(field, old_val) != _format_value(field, new_val):
-            field_name = _field_label(field)
-            changes.append(
-                f'{actor_name} عدّل {field_name} من "{_format_value(field, old_val)}" إلى "{_format_value(field, new_val)}"'
-            )
+    changes = [
+        f'{actor_name} عدّل {change}'
+        for change in _state_changes(old_state, new_state)
+    ]
 
     if not changes:
         invalidate_runtime_caches()
@@ -139,6 +256,8 @@ def _log_save(sender, instance, created, **kwargs):
 
 
 def _log_delete(sender, instance, **kwargs):
+    if is_audit_suppressed():
+        return
     actor_name, _, _ = _actor_info()
     label = _model_label(instance)
     identifier = _instance_identifier(instance)
@@ -155,6 +274,7 @@ def connect_audit_signals():
     for model in apps.get_app_config('api').get_models():
         if model in SKIP_MODELS:
             continue
+        model.add_to_class('objects', AuditManager())
         pre_save.connect(_capture_old_state, sender=model, dispatch_uid=f'audit_pre_{model.__name__}')
         post_save.connect(_log_save, sender=model, dispatch_uid=f'audit_post_{model.__name__}')
         post_delete.connect(_log_delete, sender=model, dispatch_uid=f'audit_del_{model.__name__}')

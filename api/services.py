@@ -46,6 +46,7 @@ from .models import (
     Notification,
 )
 from .role_utils import normalize_role_code
+from .audit_context import suppress_audit_logging
 
 
 BLOOD_TYPES = BLOOD_TYPES  # re-export for callers
@@ -484,23 +485,25 @@ def _update_storage_room_location(old_room_name, new_room_name):
             changed_bags.append(bag)
 
     if changed_bags:
-        BloodBag.objects.bulk_update(changed_bags, ['location'])
+        with suppress_audit_logging():
+            BloodBag.objects.bulk_update(changed_bags, ['location'])
         invalidate_runtime_caches()
 
 
 def rebuild_storage_rooms(config):
-    StorageFridge.objects.all().delete()
-    StorageRoom.objects.all().delete()
-    for detail in config.details or []:
-        room_name = detail['room']
-        room = StorageRoom.objects.create(
-            room=room_name,
-            used=0,
-            capacity=_room_capacity(detail, config.capacity_per_shelf),
-        )
-        for fridge_name in detail.get('fridges', []):
-            StorageFridge.objects.create(room=room, fridge_id=fridge_name, used=0)
-    sync_storage_from_bags()
+    with suppress_audit_logging():
+        StorageFridge.objects.all().delete()
+        StorageRoom.objects.all().delete()
+        for detail in config.details or []:
+            room_name = detail['room']
+            room = StorageRoom.objects.create(
+                room=room_name,
+                used=0,
+                capacity=_room_capacity(detail, config.capacity_per_shelf),
+            )
+            for fridge_name in detail.get('fridges', []):
+                StorageFridge.objects.create(room=room, fridge_id=fridge_name, used=0)
+        sync_storage_from_bags()
 
 
 def default_storage_details(total_rooms, fridges_per_room, shelves_per_fridge):
@@ -860,15 +863,16 @@ def validate_storage_for_bags(room_name, fridge_name, qty=1, shelf_name=None, pr
 
 
 def _update_fridge_usage(room_name, fridge_name, delta):
-    room = StorageRoom.objects.filter(room=room_name).first()
-    if not room:
-        return
-    fridge = StorageFridge.objects.filter(room=room, fridge_id=fridge_name).first()
-    if fridge:
-        fridge.used = max(0, fridge.used + delta)
-        fridge.save(update_fields=['used'])
-    room.used = max(0, min(room.capacity, room.used + delta))
-    room.save(update_fields=['used'])
+    with suppress_audit_logging():
+        room = StorageRoom.objects.filter(room=room_name).first()
+        if not room:
+            return
+        fridge = StorageFridge.objects.filter(room=room, fridge_id=fridge_name).first()
+        if fridge:
+            fridge.used = max(0, fridge.used + delta)
+            fridge.save(update_fields=['used'])
+        room.used = max(0, min(room.capacity, room.used + delta))
+        room.save(update_fields=['used'])
 
 
 def _parse_bag_location(location):
@@ -904,16 +908,18 @@ def _bag_storage_qty(bag):
 
 def _release_bag_storage(bag):
     """تحرير مكان التخزين عند خروج الكيس من الثلاجة."""
-    room_name, fridge_name = _parse_bag_location(bag.location)
-    if room_name and fridge_name:
-        _update_fridge_usage(room_name, fridge_name, -_bag_storage_qty(bag))
+    with suppress_audit_logging():
+        room_name, fridge_name = _parse_bag_location(bag.location)
+        if room_name and fridge_name:
+            _update_fridge_usage(room_name, fridge_name, -_bag_storage_qty(bag))
 
 
 def _occupy_bag_storage(bag):
     """حجز مكان تخزين عند إعادة الكيس للثلاجة."""
-    room_name, fridge_name = _parse_bag_location(bag.location)
-    if room_name and fridge_name:
-        _update_fridge_usage(room_name, fridge_name, _bag_storage_qty(bag))
+    with suppress_audit_logging():
+        room_name, fridge_name = _parse_bag_location(bag.location)
+        if room_name and fridge_name:
+            _update_fridge_usage(room_name, fridge_name, _bag_storage_qty(bag))
 
 
 def _release_bags_storage(bags):
@@ -924,11 +930,12 @@ def _release_bags_storage(bags):
 def _remove_bag_on_exit(bag):
     """إزالة الكيس نهائياً من النظام بعد خروجه (تسليم/استهلاك)."""
     bag_id = bag.bag_id
-    if bag.status in STORAGE_OCCUPYING_STATUSES:
-        _release_bag_storage(bag)
-    _unlink_bag_from_requests(bag_id)
-    bag._skip_inventory_signal = True
-    bag.delete()
+    with suppress_audit_logging():
+        if bag.status in STORAGE_OCCUPYING_STATUSES:
+            _release_bag_storage(bag)
+        _unlink_bag_from_requests(bag_id)
+        bag._skip_inventory_signal = True
+        bag.delete()
     return bag_id
 
 
@@ -1108,34 +1115,37 @@ def transfer_bag(bag_id, room_name, fridge_name, shelf_name=None, username=None,
 @transaction.atomic
 def sync_storage_from_bags():
     """إعادة حساب used في الغرف والثلاجات من مواقع الأكياس الفعلية."""
-    StorageFridge.objects.all().update(used=0)
-    StorageRoom.objects.all().update(used=0)
+    with suppress_audit_logging():
+        StorageFridge.objects.all().update(used=0)
+        StorageRoom.objects.all().update(used=0)
 
-    fridge_usage = {}
-    room_usage = {}
-    for bag in BloodBag.objects.filter(status__in=STORAGE_OCCUPYING_STATUSES):
-        room_name, fridge_name = _parse_bag_location(bag.location)
-        if not room_name or not fridge_name:
-            continue
-        qty = _bag_storage_qty(bag)
-        fridge_key = (room_name, fridge_name)
-        fridge_usage[fridge_key] = fridge_usage.get(fridge_key, 0) + qty
-        room_usage[room_name] = room_usage.get(room_name, 0) + qty
+        fridge_usage = {}
+        room_usage = {}
+        for bag in BloodBag.objects.filter(status__in=STORAGE_OCCUPYING_STATUSES):
+            room_name, fridge_name = _parse_bag_location(bag.location)
+            if not room_name or not fridge_name:
+                continue
+            qty = _bag_storage_qty(bag)
+            fridge_key = (room_name, fridge_name)
+            fridge_usage[fridge_key] = fridge_usage.get(fridge_key, 0) + qty
+            room_usage[room_name] = room_usage.get(room_name, 0) + qty
 
-    for (room_name, fridge_name), count in fridge_usage.items():
-        room = StorageRoom.objects.filter(room=room_name).first()
-        if not room:
-            continue
-        fridge = StorageFridge.objects.filter(room=room, fridge_id=fridge_name).first()
-        if fridge:
-            fridge.used = count
-            fridge.save(update_fields=['used'])
+        for (room_name, fridge_name), count in fridge_usage.items():
+            room = StorageRoom.objects.filter(room=room_name).first()
+            if not room:
+                continue
+            fridge = StorageFridge.objects.filter(room=room, fridge_id=fridge_name).first()
+            if fridge and fridge.used != count:
+                fridge.used = count
+                fridge.save(update_fields=['used'])
 
-    for room_name, count in room_usage.items():
-        room = StorageRoom.objects.filter(room=room_name).first()
-        if room:
-            room.used = min(count, room.capacity)
-            room.save(update_fields=['used'])
+        for room_name, count in room_usage.items():
+            room = StorageRoom.objects.filter(room=room_name).first()
+            if room:
+                next_used = min(count, room.capacity)
+                if room.used != next_used:
+                    room.used = next_used
+                    room.save(update_fields=['used'])
 
     invalidate_runtime_caches()
     return {
@@ -1463,11 +1473,12 @@ def _deduct_bag_from_inventory(bag):
 
 def _purge_bag_everywhere(bag):
     """إزالة أثر الكيس من المخزون والتخزين والطلبات والمستفيدين."""
-    _unlink_bag_from_requests(bag.bag_id)
-    _unlink_bag_from_beneficiaries(bag.bag_id)
-    _deduct_bag_from_inventory(bag)
-    if bag.status in STORAGE_OCCUPYING_STATUSES:
-        _release_bag_storage(bag)
+    with suppress_audit_logging():
+        _unlink_bag_from_requests(bag.bag_id)
+        _unlink_bag_from_beneficiaries(bag.bag_id)
+        _deduct_bag_from_inventory(bag)
+        if bag.status in STORAGE_OCCUPYING_STATUSES:
+            _release_bag_storage(bag)
 
 
 @transaction.atomic
@@ -1480,9 +1491,10 @@ def delete_bag(bag_id, username, role, audit_note=None):
     if not bag:
         raise ValueError('الكيس غير موجود.')
 
-    _purge_bag_everywhere(bag)
-    bag._skip_inventory_signal = True
-    bag.delete()
+    with suppress_audit_logging():
+        _purge_bag_everywhere(bag)
+        bag._skip_inventory_signal = True
+        bag.delete()
 
     push_audit(
         username,
@@ -1502,21 +1514,22 @@ def dispose_bag(bag_id, disposal_type, blood, reason, worker, username, role):
     if bag.status not in ACTIVE_BAG_STATUSES:
         raise ValueError('الكيس غير موجود في المخزون النشط.')
 
-    DisposalLog.objects.create(
-        bag_code=bag_id,
-        disposal_type=disposal_type or get_product_label(bag.product_type),
-        blood=blood or bag.blood_type,
-        product_type=normalize_product_type(bag.product_type),
-        date=date.today(),
-        reason=reason,
-        worker=worker,
-        donor_name=(bag.donor or '').strip(),
-        detected_diseases=[],
-    )
+    with suppress_audit_logging():
+        DisposalLog.objects.create(
+            bag_code=bag_id,
+            disposal_type=disposal_type or get_product_label(bag.product_type),
+            blood=blood or bag.blood_type,
+            product_type=normalize_product_type(bag.product_type),
+            date=date.today(),
+            reason=reason,
+            worker=worker,
+            donor_name=(bag.donor or '').strip(),
+            detected_diseases=[],
+        )
 
-    _purge_bag_everywhere(bag)
-    bag._skip_inventory_signal = True
-    bag.delete()
+        _purge_bag_everywhere(bag)
+        bag._skip_inventory_signal = True
+        bag.delete()
     push_audit(username, role, 'تسجيل تخلص', f'كيس {bag_id}: {reason}')
     invalidate_runtime_caches()
     return True
