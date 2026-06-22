@@ -45,7 +45,6 @@ ROLE_API_ALLOWLIST = {
         r'^/api/bootstrap/',
         r'^/api/live-sync/',
         r'^/api/dashboard-stats/',
-        r'^/api/blood-output-stats/',
         r'^/api/ai-predictions/',
         r'^/api/blood-inventory/',
         r'^/api/blood-bags/',

@@ -4,115 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Drop4Life</title>
-<style>
   :root {
-    --bg-dark: #F6F7FB;
-    --panel-dark: rgba(255, 255, 255, 0.95);
-    --panel-glass: rgba(255, 255, 255, 0.88);
-    --panel-surface: rgba(255, 255, 255, 0.78);
-    --border-glass: rgba(187, 200, 217, 0.45);
-    --text-white: #1E293B;
-    --text-gray: #64748B;
-    --panel-shadow: rgba(15, 23, 42, 0.12);
-    --bg-gradient: radial-gradient(circle at 20% 10%, rgba(255,255,255,0.8), rgba(246,247,251,0.98));
-  
-    --red: #D23B4A;
-    --red-glow: rgba(210, 59, 74, 0.25);
-    --red-dark: #B33143;
-    --gold: #C9A44F;
-    --gold-glow: rgba(201, 164, 79, 0.2);
-    --success: #18976B;
-    --info: #3E75FF;
-    
-    --font-main: 'Segoe UI', Tahoma, Arial, sans-serif;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    font-family: var(--font-main);
-    background: var(--bg-gradient);
-    color: var(--text-white);
-    min-height: 100vh;
-    overflow-x: hidden;
-    transition: background 0.4s ease, color 0.4s ease;
-  }
-  body.theme-dark { background: radial-gradient(circle at 30% 10%, #181B2E 0%, #0E1220 100%); color: #F8FAFC; }
-  body.theme-glass { background: radial-gradient(circle at 10% 20%, rgba(255,255,255,0.45), rgba(246,247,251,0.95)); color: #102A43; }
-  body.theme-gradient { background: linear-gradient(135deg, #F9E7EE 0%, #EEF6FF 100%); color: #102A43; }
-
-  .theme-card {
-    border-radius: 18px;
-    cursor: pointer;
-    overflow: hidden;
-    border: 1px solid rgba(15,23,42,0.08);
-    box-shadow: 0 20px 45px rgba(15,23,42,0.08);
-    transition: transform 0.25s ease, border-color 0.25s ease;
-  }
-  .theme-card:hover { transform: translateY(-4px); border-color: rgba(210,59,74,0.3); }
-  .theme-card .swatch { height: 120px; }
-  .theme-card .theme-name { padding: 14px; font-weight: 700; text-align: center; }
-
-  /* SCROLLBAR */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: var(--bg-dark); }
-  ::-webkit-scrollbar-thumb { background: var(--red-dark); border-radius: 10px; }
-
-  /* ANIMATIONS */
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes glassGlow { 0%, 100% { border-color: rgba(192, 21, 42, 0.25); } 50% { border-color: rgba(229, 26, 55, 0.5); } }
-  @keyframes criticalBlink { 0%, 100% { box-shadow: 0 0 4px var(--red), inset 0 0 8px rgba(229,26,55,0.2); border-color: var(--red); } 50% { box-shadow: 0 0 20px var(--red-glow), inset 0 0 15px rgba(229,26,55,0.5); border-color: #FF4D6A; } }
-  @keyframes warningBlink { 0%, 100% { box-shadow: 0 0 4px var(--gold); border-color: var(--gold); } 50% { box-shadow: 0 0 16px var(--gold-glow); border-color: #FFE07D; } }
-  @keyframes pulsePulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-
-  /* AUTH SECTION */
-  #auth-wrapper {
-    display: flex; align-items: center; justify-content: center;
-    min-height: 100vh; padding: 20px;
-    background: linear-gradient(135deg, rgba(210, 59, 74, 0.15) 0%, rgba(62, 117, 255, 0.12) 100%);
-    background-size: cover; position: relative;
-  }
-  #auth-wrapper::before {
-    content: ''; position: absolute; inset: 0; background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(8px);
-  }
-
-  .login-card {
-    position: relative; width: 100%; max-width: 450px;
-    background: var(--panel-dark); backdrop-filter: blur(20px);
-    border: 1px solid var(--border-glass); border-radius: 24px;
-    padding: 2.5rem; box-shadow: 0 20px 40px rgba(30, 41, 59, 0.12);
-    animation: fadeIn 0.6s ease-out;
-  }
-  .login-logo { text-align: center; margin-bottom: 2rem; }
-  .login-logo span { font-size: 3.5rem; display: inline-block; animation: pulsePulse 2s infinite; }
-  .login-logo h2 { font-weight: 900; letter-spacing: -0.5px; margin-top: 0.5rem; }
-  .login-logo p { color: var(--text-gray); font-size: 13px; margin-top: 0.25rem; }
-
-  /* APP LAYOUT */
-  #app-wrapper { display: flex; min-height: 100vh; flex-direction: row; width: 100%; min-width: 0; }
-  
-  /* SIDEBAR (responsive) */
-  .sidebar {
-    position: sticky; right: 0; top: 0; height: 100vh; width: min(252px, 100%); min-width: 0; flex-shrink: 0;
-    background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(20px);
-    border-left: 1px solid var(--border-glass); display: flex; flex-direction: column; z-index: 100; transition: all 0.3s ease;
-  }
-  .logo-wrap { padding: 1.25rem 1rem; border-bottom: 1px solid var(--border-glass); display: flex; align-items: center; gap: 10px; min-width: 0; }
-  .logo-icon { width: 40px; height: 40px; background: var(--red); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 0 15px var(--red-glow); flex-shrink: 0; }
-  .logo-text { min-width: 0; flex: 1; }
-  .logo-text .name { font-weight: 900; font-size: 18px; color: var(--text-white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .logo-text .tag { color: var(--text-gray); font-size: 10px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-
-  .nav-section { padding: 1rem 0.65rem; flex: 1; overflow-y: auto; overflow-x: hidden; }
-  .nav-label { font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: var(--text-gray); padding: 0.65rem 0.65rem 0.25rem; text-transform: uppercase; opacity: 0.65; }
-  
-  .nav-item {
-    display: flex; align-items: center; gap: 10px; padding: 0.55rem 0.7rem; border-radius: 12px;
-    cursor: pointer; color: var(--text-gray); font-size: 13px; font-weight: 500; line-height: 1.2;
-    transition: all 0.2s; margin-bottom: 4px; border: none; background: none; width: 100%; text-align: right;
-    min-height: 40px; overflow: hidden; box-sizing: border-box;
-  }
-  .nav-icon { flex-shrink: 0; width: 22px; text-align: center; font-size: 16px; line-height: 1; }
   .nav-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .nav-item:hover { background: rgba(226, 232, 240, 0.85); color: var(--text-white); }
   .nav-item.active { background: linear-gradient(90deg, var(--red-dark), var(--red)); color: #fff; box-shadow: 0 4px 15px rgba(210,59,74,0.18); }
@@ -1369,26 +1261,6 @@
             </div>
           </div>
         </div>
-        <div class="card" id="blood-output-stats-section" style="display:none; margin-top:1.5rem;">
-          <div class="card-header">
-            <div class="card-title" data-i18n="cards.bloodOutput">🩸 إخراج الدم من النظام (تسليمات + مستفيدون)</div>
-          </div>
-          <div style="display:grid; gap:1rem; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); margin:1rem 0;">
-            <div class="card" style="padding:1rem;"><div style="font-size:12px; color:var(--text-gray);" data-i18n="dashboard.bloodOutputThisMonth">هذا الشهر</div><div id="blood-output-current-month" style="font-size:28px; font-weight:800; color:var(--red);">0</div><div style="font-size:12px;" data-i18n="dashboard.stat.unit.bag">كيس</div></div>
-            <div class="card" style="padding:1rem;"><div style="font-size:12px; color:var(--text-gray);" data-i18n="dashboard.bloodOutputHospitalsMonth">مستشفيات (شهر)</div><div id="blood-output-hospital-month" style="font-size:24px; font-weight:700;">0</div></div>
-            <div class="card" style="padding:1rem;"><div style="font-size:12px; color:var(--text-gray);" data-i18n="dashboard.bloodOutputBeneficiariesMonth">مستفيدون (شهر)</div><div id="blood-output-beneficiary-month" style="font-size:24px; font-weight:700;">0</div></div>
-          </div>
-          <div class="card" style="min-height:360px; padding:1rem;">
-            <div class="card-header" style="padding-bottom:0.75rem;"><div class="card-title" data-i18n="chart.bloodOutputMonthly">إخراج الدم شهرياً (آخر 12 شهر)</div></div>
-            <div style="height:300px;"><canvas id="chart-blood-output-monthly"></canvas></div>
-          </div>
-          <div class="table-responsive" style="margin-top:1rem;">
-            <table>
-              <thead><tr><th>المصدر</th><th>الاسم</th><th class="col-blood">الفصيلة</th><th>المكون</th><th>العدد</th><th>التاريخ</th></tr></thead>
-              <tbody id="table-blood-output-recent"></tbody>
-            </table>
-          </div>
-        </div>
       </div>
 
       <div class="page" id="page-inventory">
@@ -2323,6 +2195,7 @@ window.storageConfig = {
 };
 window.pendingDonors = {};
 window.beneficiaries = [];
+window.bloodOutputStats = {};
 window.dashboardStats = {};
 window.profileFormDirty = false;
 window.storageConfigPanelDirty = false;
@@ -2433,6 +2306,7 @@ var accounts = window.accounts;
 var storageConfig = window.storageConfig;
 var pendingDonors = window.pendingDonors;
 var beneficiaries = window.beneficiaries;
+var bloodOutputStats = window.bloodOutputStats;
 let apiLoading = false;
 
 function isSuperUser() {
@@ -2582,6 +2456,7 @@ function rebindLiveDataRefs() {
   storageConfig = window.storageConfig;
   pendingDonors = window.pendingDonors;
   beneficiaries = window.beneficiaries;
+  bloodOutputStats = window.bloodOutputStats;
 }
 
 function displayLocation(loc) {
@@ -3491,81 +3366,6 @@ function renderStatisticsPage() {
   }
   renderCustomChartLegend('legend-lab-outcomes', labLabels, CHART_LAB_COLORS, labCounts);
 
-  renderBloodOutputStatsSection();
-}
-
-async function renderBloodOutputStatsSection() {
-  const section = document.getElementById('blood-output-stats-section');
-  if (!section) return;
-  section.style.display = isSuperUser() ? 'block' : 'none';
-  if (!isSuperUser() || typeof Chart === 'undefined') return;
-
-  let stats = window.bloodOutputStats || null;
-  if (Drop4LifeAPI.isLoggedIn()) {
-    try {
-      stats = await Drop4LifeAPI.loadBloodOutputStats(12);
-      window.bloodOutputStats = stats;
-    } catch (_) {}
-  }
-  if (!stats) return;
-
-  const setText = (id, value) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = String(value ?? 0);
-  };
-  setText('blood-output-current-month', stats.currentMonthTotal);
-  setText('blood-output-hospital-month', stats.currentMonthHospital);
-  setText('blood-output-beneficiary-month', stats.currentMonthBeneficiary);
-
-  const tbody = document.getElementById('table-blood-output-recent');
-  if (tbody) {
-    const rows = Array.isArray(stats.recentDeliveries) ? stats.recentDeliveries : [];
-    tbody.innerHTML = rows.length ? rows.map(row => `
-      <tr>
-        <td>${escapeHtml(typeof translateBloodOutputSource === 'function' ? translateBloodOutputSource(row.source) : (row.source || ''))}</td>
-        <td class="col-name">${escapeHtml(row.name || '')}</td>
-        ${bloodTypeCell(row.blood)}
-        <td>${productLabel(row.productType || 'RBC')}</td>
-        <td class="col-qty">${row.qty || 0}</td>
-        <td class="col-date">${typeof formatTableDate === 'function' ? formatTableDate(row.date, true) : escapeHtml(row.date || '')}</td>
-      </tr>
-    `).join('') : tableEmptyRow(6, 'empty.bloodOutputDeliveries');
-  }
-
-  const ctx = document.getElementById('chart-blood-output-monthly');
-  if (!ctx) return;
-  const monthly = Array.isArray(stats.monthly) ? stats.monthly : [];
-  const labels = monthly.map(item => item.label);
-  const hospitalData = monthly.map(item => item.hospital || 0);
-  const beneficiaryData = monthly.map(item => item.beneficiary || 0);
-
-  window.statisticsCharts = window.statisticsCharts || {};
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    animation: { duration: 1400, easing: 'easeOutQuart' },
-    plugins: { legend: { position: 'bottom' } },
-    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
-  };
-
-  if (!window.statisticsCharts.bloodOutput) {
-    window.statisticsCharts.bloodOutput = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          { label: t('chart.bloodOutput.hospitals'), data: hospitalData, backgroundColor: '#2563EB', borderRadius: 6 },
-          { label: t('chart.bloodOutput.beneficiaries'), data: beneficiaryData, backgroundColor: '#D23B4A', borderRadius: 6 },
-        ],
-      },
-      options: chartOptions,
-    });
-  } else {
-    window.statisticsCharts.bloodOutput.data.labels = labels;
-    window.statisticsCharts.bloodOutput.data.datasets[0].data = hospitalData;
-    window.statisticsCharts.bloodOutput.data.datasets[1].data = beneficiaryData;
-    window.statisticsCharts.bloodOutput.update('active');
-  }
 }
 
 async function calculateDashboardMetrics() {

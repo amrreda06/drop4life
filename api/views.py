@@ -991,18 +991,6 @@ class DashboardStatsView(SecureAPIView):
         return Response(compute_dashboard_stats())
 
 
-class BloodOutputStatsView(SecureAPIView):
-    permission_classes = [IsAuthenticatedSession, IsSuperAdmin]
-
-    def get(self, request):
-        months = request.query_params.get('months', 12)
-        try:
-            months = int(months)
-        except (TypeError, ValueError):
-            months = 12
-        return Response(compute_blood_output_stats(months=months))
-
-
 class BeneficiaryViewSet(SuperAdminWritesPermissionMixin, viewsets.ModelViewSet):
     queryset = Beneficiary.objects.all()
     serializer_class = BeneficiarySerializer

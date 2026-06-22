@@ -347,10 +347,6 @@
       return request('/dashboard-stats/');
     },
 
-    async loadBloodOutputStats(months = 12) {
-      return request(`/blood-output-stats/?months=${months}`);
-    },
-
     async clearBloodOutputStats(password) {
       return request('/operations/clear-blood-output-stats/', {
         method: 'POST',
