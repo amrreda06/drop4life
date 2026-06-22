@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Drop4Life</title>
+    <script>
+      (function () {
+        try {
+          var locale = localStorage.getItem('drop4life_locale') === 'en' ? 'en' : 'ar';
+          document.documentElement.lang = locale;
+          document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr';
+          document.title = locale === 'en' ? 'Drop4Life — Smart Blood Bank' : 'Drop4Life — بنك الدم الذكي';
+        } catch (_) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

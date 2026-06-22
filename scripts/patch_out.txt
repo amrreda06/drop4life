@@ -1,0 +1,10 @@
+﻿python :   File "C:\Users\amrreda\Desktop\drop4life-main\scripts\patch_i18n_html.py", line 59
+At C:\Users\amrreda\AppData\Local\Temp\ps-script-3bc58c6a-5085-4712-a35d-7ecd4823d8ca.ps1:101 char:1
++ python "C:\Users\amrreda\Desktop\drop4life-main\scripts\patch_i18n_ht ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (  File "C:\User...ml.py", line 59:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    elif new_start.endswith('Body'))'):
+                                   ^
+SyntaxError: unmatched ')'
